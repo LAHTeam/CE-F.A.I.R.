@@ -17,7 +17,7 @@
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{font-family:'Sarabun','Segoe UI',system-ui,sans-serif;margin:0;background:var(--bg);color:var(--text);line-height:1.7;font-size:15px}
+body{font-family:'Sarabun','Segoe UI',system-ui,sans-serif;margin:0;background:var(--bg);color:var(--text);line-height:1.7;font-size:19px}
 a{color:var(--navy-2)}
 
 header{position:relative;background:
@@ -32,7 +32,8 @@ header p{margin:0;opacity:.95;max-width:780px;font-size:1.02rem}
 header .meta{margin-top:18px;display:flex;flex-wrap:wrap;gap:8px}
 header .meta span{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);padding:4px 10px;border-radius:6px;font-size:.82rem}
 
-.progress{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:10px 24px}
+.progress{position:fixed;top:-60px;left:0;right:0;z-index:50;background:rgba(255,255,255,.94);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:10px 24px;box-shadow:0 2px 8px rgba(0,0,0,.05);transition:top .25s ease}
+.progress.show{top:0}
 .progress .wrap{max-width:1000px;margin:0 auto;display:flex;align-items:center;gap:12px}
 .progress .bar{flex:1;height:8px;background:#e5e7eb;border-radius:999px;overflow:hidden}
 .progress .fill{height:100%;width:0%;background:linear-gradient(90deg,var(--primary),var(--navy-2));transition:width .3s ease}
@@ -121,7 +122,7 @@ footer{padding:30px 20px;color:var(--muted);font-size:.85rem;text-align:center;b
 footer a{color:var(--navy-2);text-decoration:none}
 
 @media(max-width:760px){
-  body{font-size:14px}
+  body{font-size:17px}
   header{padding:36px 20px 70px}
   header h1{font-size:1.4rem}
   .toc ol{columns:1}
@@ -739,6 +740,15 @@ npm run validate</pre>
     var p = Math.round(last / steps.length * 100);
     fill.style.width = p + '%';
     pct.textContent = p + '%';
+
+    // Progress bar — ซ่อนตอนอยู่บนสุด (ทับ header อยู่) โผล่เมื่อเลื่อนผ่าน header
+    var headerEl = document.querySelector('header');
+    var headerBottom = headerEl ? headerEl.offsetTop + headerEl.offsetHeight : 200;
+    var bar = document.querySelector('.progress');
+    if (bar) {
+      if (window.scrollY > headerBottom) bar.classList.add('show');
+      else bar.classList.remove('show');
+    }
   }
   window.addEventListener('scroll', updateProgress);
   window.addEventListener('load', updateProgress);
