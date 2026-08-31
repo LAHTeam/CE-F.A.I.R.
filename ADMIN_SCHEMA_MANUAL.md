@@ -10,6 +10,7 @@
 4. [การทำงานร่วมกับปฏิทิน Google Calendar (เฉพาะวันนัดแสกน Biometric)](#4-การทำงานร่วมกับปฏิทิน-google-calendar)
 5. [การเชื่อมต่อ API / Webhook กับเครื่องสแกนชีวมิติ (Biometric Hardware Integration)](#5-การเชื่อมต่อ-api--webhook-กับเครื่องสแกนชีวมิติ)
 6. [ขั้นตอนการคัดลอกระบบไปใช้กับอาคาร/ห้องปฏิบัติการอื่น (Deployment Guide)](#6-ขั้นตอนการคัดลอกระบบไปใช้กับอาคารห้องปฏิบัติการอื่น)
+7. [ความปลอดภัย Token, Data Retention และการตรวจก่อน Deploy](#7-ความปลอดภภ-token-data-retention-และการตรวจกองน-deploy)
 
 ---
 
@@ -99,9 +100,21 @@
 | 44 | `BiometricStatus` | String | สถานะชีวมิติ: `Pending`, `Scheduled`, `Completed` |
 | 45 | `CurrentStage` | Number | ขั้นตอนปัจจุบัน (1-4) |
 | 46 | `OverallStatus` | String | สถานะรวม: `Pending`, `Approved`, `Rejected` |
-| 47 | `SignatureData` | String | Base64 PNG ของลายเซ็นดิจิทัล |
-| 48 | `PhotoURL` | String | URL รูปถ่ายหน้าตรงของผู้ยื่นคำขอ |
+| 47 | `SignatureData` | String | Base64 PNG ของลายเซ็นดิจิทัล (ส่งเฉพาะ `image/*` whitelist) |
+| 48 | `PhotoURL` | String | URL รูปถ่ายหน้าตรง (ชื่อไฟล์สุ่ม `IMG_<uuid>`, จำกัด 5 MB, whitelist JPEG/PNG/WebP, ไม่เปิดเผยแขวดข้อมูลในชื่อไฟล์) |
 | 49 | `RequestToken` | String | Secure Token สำหรับผู้ยื่นคำขอใช้เปิดดู Tracking Modal |
+| 50 | `Stage1_TokenUsedAt` | DateTime | **(Token Security)** วันเวลาที่ Token ขั้น 1 ถูกใช้ครั้งแรก (ใช้ได้ 1 ครั้งเท่านั้น) |
+| 51 | `Stage1_TokenFailedAttempts` | Number | จำนวนครั้งที่วิเคราะห์ Token ขั้น 1 ล้มเหลว (ล็อกเมื่อครบ 5 ครั้ง) |
+| 52 | `Stage1_TokenLastFailedAt` | DateTime | เวลาตัด Token ขั้น 1 ล้มเหลวล่าสุด |
+| 53 | `Stage2_TokenUsedAt` | DateTime | Token ขั้น 2 ถูกใช้แล้ว |
+| 54 | `Stage2_TokenFailedAttempts` | Number | จำนวนครั้งล้มเหลวของ Token ขั้น 2 |
+| 55 | `Stage2_TokenLastFailedAt` | DateTime | เวลาล้มเหลวล่าสุดขั้น 2 |
+| 56 | `Stage3_TokenUsedAt` | DateTime | Token ขั้น 3 ถูกใช้แล้ว |
+| 57 | `Stage3_TokenFailedAttempts` | Number | จำนวนครั้งล้มเหลวของ Token ขั้น 3 |
+| 58 | `Stage3_TokenLastFailedAt` | DateTime | เวลาล้มเหลวล่าสุดขั้น 3 |
+| 59 | `Stage4_TokenUsedAt` | DateTime | Token ขั้น 4 ถูกใช้แล้ว (สำหรับเส้น Approve/Reject) |
+| 60 | `Stage4_TokenFailedAttempts` | Number | จำนวนครั้งล้มเหลวของ Token ขั้น 4 |
+| 61 | `Stage4_TokenLastFailedAt` | DateTime | เวลาล้มเหลวล่าสุดขั้น 4 |
 
 ---
 
@@ -215,3 +228,13 @@ Content-Type: application/json
 5. ตั้งค่า `ORG_API_KEY` และเมื่อเปิดใช้งานอุปกรณ์ให้ตั้ง `BIOMETRIC_API_URL` กับ `BIOMETRIC_WEBHOOK_SECRET` ใน **Project Settings > Script Properties** (ห้ามใส่ค่าจริงในเอกสารหรือซอร์สโค้ด)
 6. กด **Deploy > New Deployment > Web App (Execute as: User accessing the web app, Access: Anyone within domain)** แล้วนำ URL ไปใช้งานได้ โดยผู้ใช้ต้องเข้าสู่ระบบด้วย Google Account ขององค์กร
 ```
+
+---
+
+### 7. ความปลอดภัย Token, Data Retention และการตรวจก่อน Deploy
+1. **Token แบบครั้งเดียว (One-Time):** `verifyToken()` มาร์ค `StageN_TokenUsedAt` เมื่อสำเร็จ และปฏิเสธการใช้ซ้ำ — บินด์อีเมลผู้อนุมัติตามขั้น และล็อกเมื่อวิเคราะห์ล้มเหลว 5 ครั้งต่อ stage (ตรวจจาก `FailedAttempts`/`LastFailedAt`)
+2. **Masked logging:** ทุก log ที่เกี่ยวกับ token ใช้ `maskToken()` เหลือแค่ 4 ตัวหน้า/ท้าย ไม่แสดงค่าเต็มใน Logs sheet
+3. **รูปถ่ายปลอดภัย:** `saveApplicantPhoto()` ตรวจ MIME type จริง (JPEG/PNG/WebP only), จำกัด 5 MB ฝั่ง Backend, ตั้งชื่อไฟล์สุ่ม และไม่เปิด Public Link
+4. **Data Retention:** `applyDataRetentionPolicy()` ทำงานทุกวันเวลา 02:00 (ผูกใน `setupDailyTriggers()`) ลบไฟล์รูปของคำขอ `Expired`/`Rejected` ที่เก่าเกิน `DATA_RETENTION_MONTHS` และเคลียร์ PhotoURL
+5. **Validation:** รัน `node validate.js` หรือ `npm run validate` ตรวจความผิดพลาด/ความปลอดภัยก่อน clasp deploy ทุกครั้ง
+6. **Version Control:** commit ทีละรอบด้วย Git, แยก branch `development`/`production`, ใช้ `.gitignore`/`.claspignore` คั้น secret — หากเคย commit secret ไปแล้วต้อง rotate/revoke เสมอ
