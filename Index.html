@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน</title>
+
+  <!-- Preconnect & Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Instant Stylesheet (Zero delay rendering) -->
+  <?!= include('Stylesheet'); ?>
+
+  <!-- SweetAlert2 & Chart.js -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+</head>
+
+<body>
+
+  <div id="app" v-cloak>
+
+    <!-- ==================== Top Navigation Header ==================== -->
+    <header class="top-nav">
+      <div class="nav-container">
+
+        <!-- Logo & Title -->
+        <div class="brand-section" @click="currentTab = 'request'">
+          <div class="brand-icon">
+            <svg style="width:20px;height:20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"/>
+            </svg>
+          </div>
+          <div>
+            <h1 class="brand-title">{{ t.systemName }}</h1>
+          </div>
+        </div>
+
+        <!-- Right Actions: Tabs + Lang Switcher -->
+        <div class="nav-actions">
+          <!-- 2 Main Tabs: Request & Dashboard -->
+          <div class="nav-tabs">
+            <button
+              @click="currentTab = 'request'"
+              :class="['nav-tab-btn', currentTab === 'request' ? 'active' : '']">
+              <span>📝</span>
+              <span>{{ t.tabRequest }}</span>
+            </button>
+
+            <button
+              @click="currentTab = 'dashboard'"
+              :class="['nav-tab-btn', currentTab === 'dashboard' ? 'active' : '']">
+              <span>📊</span>
+              <span>{{ t.tabDashboard }}</span>
+            </button>
+          </div>
+
+          <!-- Language Switcher -->
+          <div class="lang-switcher">
+            <button @click="switchLang('th')" :class="['lang-btn', currentLang === 'th' ? 'active' : '']">TH</button>
+            <button @click="switchLang('en')" :class="['lang-btn', currentLang === 'en' ? 'active' : '']">EN</button>
+          </div>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- ==================== Main Content Views ==================== -->
+    <main class="main-wrap">
+
+      <!-- 1. Request Form Tab -->
+      <request-view
+        v-if="currentTab === 'request'"
+        :lang="currentLang" :t="t" :user-email="userEmail"
+        @loading="setLoading"
+        @switch-to-dashboard="currentTab = 'dashboard'">
+      </request-view>
+
+      <!-- 2. Dashboard Tab -->
+      <dashboard-view
+        v-if="currentTab === 'dashboard'"
+        :lang="currentLang" :t="t" :user-email="userEmail" :user-role="userRole"
+        @loading="setLoading">
+      </dashboard-view>
+
+    </main>
+
+    <!-- ==================== Footer ==================== -->
+    <footer class="main-footer">
+      <p>{{ t.footerText }} &copy; {{ currentYear }}</p>
+    </footer>
+
+    <!-- ==================== Global Loading Overlay ==================== -->
+    <div v-if="loading" class="loading-layer">
+      <loading-spinner :text="isLongLoading ? t.loadingLong : t.loading"></loading-spinner>
+    </div>
+
+  </div>
+
+  <!-- KKU Gen AI Chatbot Widget -->
+  <script type="module" src="https://gen.ai.kku.ac.th/widget/chat-widget.es.js" defer></script>
+  <!-- Chatbot widget is enabled only when its provider configuration is injected securely. -->
+
+  <!-- Vue 3, SweetAlert2, Chart.js -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4" defer></script>
+
+  <!-- Inject Preloaded User Email for 0ms Fast Auto-fill -->
+  <script>
+    window.PRELOADED_USER_EMAIL = "<?= preloadedUserEmail || '' ?>";
+    window.SERVER_PARAMS = <?!= serverParamsJson || '{}' ?>;
+  </script>
+
+  <!-- Main JavaScript App (ReviewModal must be included first) -->
+  <?!= include('ReviewModal'); ?>
+  <?!= include('JavaScript'); ?>
+</body>
+</html>

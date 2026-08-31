@@ -1,0 +1,1544 @@
+<script>
+/**
+ * ==============================================================================
+ * JavaScript.html — Vue 3 Single Page Application
+ * ระบบ CE F.A.I.R. (Department of Civil Engineering, KKU)
+ * ==============================================================================
+ */
+
+// GAS Promise Wrapper
+function runGAS(funcName, ...args) {
+  return new Promise((resolve, reject) => {
+    if (typeof google === 'undefined' || !google.script || !google.script.run) {
+      console.warn(`[Mock GAS] Calling ${funcName}`, args);
+      setTimeout(() => resolve({ success: true }), 400);
+      return;
+    }
+    google.script.run
+      .withSuccessHandler((res) => resolve(res))
+      .withFailureHandler((err) => reject(err))
+      [funcName](...args);
+  });
+}
+
+// ===== Client-side Cache (sessionStorage, TTL-based) — ลด round-trip ทำให้หน้าโหลดเร็วขึ้น =====
+const GAS_CACHE_PREFIX = 'ce_cache_';
+function gasCacheGet(key) {
+  try {
+    const raw = sessionStorage.getItem(GAS_CACHE_PREFIX + key);
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    if (!obj || Date.now() > obj.expires) { sessionStorage.removeItem(GAS_CACHE_PREFIX + key); return null; }
+    return obj.data;
+  } catch (e) { return null; }
+}
+function gasCacheSet(key, data, ttlMinutes) {
+  try {
+    sessionStorage.setItem(GAS_CACHE_PREFIX + key, JSON.stringify({ data, expires: Date.now() + ttlMinutes * 60000 }));
+  } catch (e) { /* storage full — ข้าม cache ได้โดยไม่กระทบระบบ */ }
+}
+function gasCacheClear() {
+  try {
+    Object.keys(sessionStorage).filter(k => k.startsWith(GAS_CACHE_PREFIX)).forEach(k => sessionStorage.removeItem(k));
+  } catch (e) { /* ignore */ }
+}
+function runGASCached(funcName, ttlMinutes, ...args) {
+  const key = funcName + ':' + JSON.stringify(args);
+  const hit = gasCacheGet(key);
+  if (hit !== null) return Promise.resolve(hit);
+  return runGAS(funcName, ...args).then(res => { gasCacheSet(key, res, ttlMinutes); return res; });
+}
+
+// Formatters
+function formatStudentId(val) {
+  if (!val) return '';
+  const digits = String(val).replace(/\D/g, '').slice(0, 10);
+  if (digits.length <= 9) return digits;
+  return `${digits.slice(0, 9)}-${digits.slice(9, 10)}`;
+}
+
+function formatPhoneNumber(val) {
+  if (!val) return '';
+  const digits = String(val).replace(/\D/g, '').slice(0, 10);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+}
+
+// i18n Dictionary
+const i18n = {
+  th: {
+    systemName: 'ระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน',
+    tabRequest: 'ยื่นคำขอ',
+    tabDashboard: 'แดชบอร์ด',
+    footerText: 'สาขาวิชาวิศวกรรมโยธา คณะวิศวกรรมศาสตร์ มหาวิทยาลัยขอนแก่น — ระบบ CE F.A.I.R.',
+
+    // Wizard Steps
+    step0: 'ประเภทบุคคล',
+    step1: 'ข้อมูลและรูปถ่าย',
+    step2: 'ห้อง, เวลา และนัดหมาย Biometric',
+    step3: 'ผู้อนุมัติขั้นที่ 1',
+    step4: 'ผู้ร่วมและติดต่อฉุกเฉิน',
+    step5: 'ลงนามและยืนยัน',
+
+    // Person Types
+    selectPersonType: 'กรุณาเลือกประเภทบุคคลของผู้ยื่นคำขอ',
+    student: 'นักศึกษา',
+    studentDesc: 'ระดับปริญญาตรี โท เอก',
+    staff: 'บุคลากร',
+    staffDesc: 'อาจารย์และสายสนับสนุน',
+    external: 'บุคคลภายนอก',
+    externalDesc: 'หน่วยงานร่วมวิจัย/ภายนอก',
+    academicStaff: 'สายวิชาการ (อาจารย์)',
+    supportStaff: 'สายสนับสนุน',
+    bachelor: 'ปริญญาตรี',
+    master: 'ปริญญาโท',
+    doctoral: 'ปริญญาเอก',
+
+    // Divisions (แผนก)
+    div1: 'แผนกวิศวกรรมโครงสร้าง',
+    div2: 'แผนกวิศวกรรมขนส่ง',
+    div3: 'แผนกวิศวกรรมการบริหารงานก่อสร้าง',
+    div4: 'แผนกวิศวกรรมวัสดุ',
+    div5: 'แผนกวิศวกรรมทรัพยากรน้ำ',
+    div6: 'แผนกวิศวกรรมปฐพี',
+    div7: 'แผนกวิศวกรรมสำรวจ',
+    divOther: 'ต่างสาขา / ต่างคณะ / ไม่มีแผนก',
+
+    // Form Fields
+    fullName: 'ชื่อ-นามสกุล',
+    email: 'อีเมล (Google Account)',
+    phone: 'เบอร์โทรศัพท์',
+    studentId: 'รหัสนักศึกษา',
+    department: 'สาขาวิชา / ภาควิชา',
+    faculty: 'คณะ',
+    division: 'แผนก',
+    externalOrg: 'ชื่อองค์กร / บริษัท',
+    projectTopic: 'หัวข้อโครงงาน / วิจัย',
+    justification: 'เหตุผลความจำเป็น',
+    selectRoom: 'เลือกห้องปฏิบัติการ',
+    startDate: 'วันที่เริ่มต้นใช้งาน',
+    durationNotice: 'ระยะเวลาอนุมัติเริ่มต้น 3 เดือน (คำนวณอัตโนมัติ)',
+    allowedTimeStart: 'เวลาเริ่มต้นใช้งาน',
+    allowedTimeEnd: 'เวลาสิ้นสุด',
+    biometricAppointmentDate: 'วันที่ และเวลาขอเข้ารับการบันทึก Biometric (ที่ตึกกับ Admin)',
+    biometricDate: 'วันที่นัดหมาย',
+    biometricTime: 'เวลานัดหมาย',
+    purpose: 'วัตถุประสงค์การใช้งาน',
+    purposePlaceholder: 'ระบุรายละเอียดการใช้งานห้องปฏิบัติการ...',
+    advisorSearchPlaceholder: 'พิมพ์เพื่อค้นหาชื่ออาจารย์ หรือแผนก...',
+    selectAdvisorOption: '-- ค้นหาและเลือกอาจารย์ที่ปรึกษา --',
+    participantNames: 'รายชื่อผู้ร่วมใช้งาน (ถ้ามี)',
+    emergencyContact: 'ชื่อ และเบอร์โทร. ผู้ติดต่อ กรณีฉุกเฉิน',
+    emergencyPlaceholder: 'ชื่อ-นามสกุล และเบอร์โทรศัพท์ติดต่อฉุกเฉิน',
+    signaturePadTitle: 'ลงลายมือชื่อดิจิทัล (สำหรับหนังสือยินยอมคำขอ)',
+    clearSignature: 'ล้างลายเซ็น',
+    consentText: 'ข้าพเจ้ายินยอมให้จัดเก็บและประมวลผลข้อมูลส่วนบุคคลเพื่อการบริหารจัดการระบบและตรวจสอบความปลอดภัยของ ระบบ CE F.A.I.R.',
+
+    // Photo Upload
+    photoUploadTitle: 'รูปถ่ายผู้ยื่นคำขอ (หน้าตรง/บัตรประจำตัว)',
+    photoUploadHint: 'คลิกเพื่ออัปโหลดไฟล์ภาพ (JPG, PNG ไม่เกิน 2MB) — จำเป็น',
+    photoChange: 'เปลี่ยนรูปภาพ',
+    photoRequired: 'กรุณาอัปโหลดรูปถ่ายผู้ยื่นคำขอก่อนดำเนินการต่อ',
+
+    // Stage 1 Titles
+    civilStudentStage1Title: '🎓 ขั้นที่ 1: อาจารย์ที่ปรึกษา (Advisor)',
+    civilStudentStage1Desc: 'เนื่องจากท่านเป็นนักศึกษาสาขาวิชาวิศวกรรมโยธา คณะวิศวกรรมศาสตร์ กรุณาค้นหาและเลือกอาจารย์ที่ปรึกษาตามแผนกของท่าน',
+    nonCivilStage1Title: '🏛️ ขั้นที่ 1: หัวหน้าสาขาวิชาวิศวกรรมโยธา (Head of Civil Engineering)',
+    nonCivilStage1Desc: 'สำหรับนักศึกษาต่างสาขา, ต่างคณะ, บุคลากร และบุคคลภายนอก ระบบจะส่งตรงไปยัง หัวหน้าสาขาวิชาวิศวกรรมโยธา เพื่อพิจารณาอนุมัติขั้นที่ 1 โดยอัตโนมัติ',
+    nonCivilStage1Notice: '✅ ระบบกำหนดผู้อนุมัติขั้นที่ 1 ให้อัตโนมัติ ท่านสามารถกดปุ่ม "ถัดไป" ได้ทันที',
+
+    // Buttons
+    btnNext: 'ถัดไป',
+    btnPrev: 'ย้อนกลับ',
+    btnSubmit: 'ส่งคำขอ',
+    btnSearch: 'ค้นหา',
+    btnExportCSV: 'ส่งออก CSV',
+    btnSave: 'บันทึก',
+    btnCancel: 'ยกเลิก',
+    btnClose: 'ปิด',
+    btnApprove: 'อนุมัติ',
+    btnReject: 'ปฏิเสธ',
+
+    // Dashboard & Analytics
+    kpiTotal: 'คำขอทั้งหมด',
+    kpiActive: 'กำลังใช้งาน',
+    kpiPending: 'รอดำเนินการ',
+    kpiSkipped: 'ข้ามขั้นอัตโนมัติ',
+    chartStatusTitle: '📊 สถานะคำขอทั้งหมด',
+    chartPersonTypeTitle: '👤 ประเภทบุคคล',
+    chartDegreeLevelTitle: '🎓 ระดับการศึกษา (นักศึกษา)',
+    chartDivisionTitle: '🏗️ แผนกที่ยื่นคำขอ',
+    chartOutsideFacultyTitle: '🏛️ นอกคณะ / บุคคลภายนอก',
+    chartAdvisorTitle: '👨‍🏫 อาจารย์ที่ปรึกษา (Top 10)',
+    chartMonthlyTitle: '📅 ความถี่การยื่นคำขอรายเดือน',
+    chartRoomUsageTitle: '🚪 การใช้งานห้องปฏิบัติการ',
+    roomsTitle: '🚪 รายการห้องปฏิบัติการ',
+    closuresTitle: '📢 ประกาศปิดปรับปรุงห้อง',
+    colRoomId: 'รหัสห้อง',
+    colRoomName: 'ชื่อห้อง',
+    colBuildingFloor: 'อาคาร/ชั้น',
+    colCapacity: 'ความจุ (คน)',
+    colStatus: 'สถานะ',
+    colClosureTitle: 'หัวข้อประกาศ',
+    colClosureDates: 'ช่วงเวลาที่ปิด',
+    colClosureRooms: 'ห้องที่ปิด',
+    noChartData: 'ยังไม่มีข้อมูลสำหรับแสดงกราฟ',
+
+    // Approver Review Modal
+    reviewTitle: 'พิจารณาอนุมัติคำขอเข้าใช้ห้องปฏิบัติการ (ระบบ CE F.A.I.R.)',
+    applicantLabel: 'ผู้ขอ',
+    roomLabel: 'ห้อง',
+    periodLabel: 'ช่วงเวลาที่ขอ',
+    noteLabel: 'หมายเหตุการพิจารณา',
+    adminAdjustStartDate: 'ปรับเปลี่ยนวันที่เริ่มต้นใช้งาน (สิทธิ์ Admin)',
+    adminAdjustBiometric: 'ปรับเปลี่ยนวัน-เวลานัดหมายมาบันทึก Biometric กับ Admin ที่ตึก',
+
+    // Statuses
+    Pending: 'รอดำเนินการ',
+    InReview: 'กำลังพิจารณา',
+    Approved: 'อนุมัติแล้ว',
+    Active: 'กำลังใช้งาน',
+    Expired: 'หมดอายุ',
+    Rejected: 'ปฏิเสธ',
+    Skipped: 'ข้ามขั้นอัตโนมัติ',
+    Scheduled: 'นัดหมายแล้ว',
+    Available: 'พร้อมใช้งาน',
+    Maintenance: 'ปิดปรับปรุง',
+
+    // Messages
+    submitSuccessTitle: 'ส่งคำขอสำเร็จ!',
+    loading: 'กำลังประมวลผล...',
+    loadingLong: 'กรุณารอสักครู่...',
+    errorTitle: 'เกิดข้อผิดพลาด',
+    successTitle: 'สำเร็จ',
+    noData: 'ไม่พบข้อมูล'
+  },
+  en: {
+    systemName: 'After-Hours Civil Engineering Lab Access System',
+    tabRequest: 'Request Access',
+    tabDashboard: 'Dashboard',
+    footerText: 'Department of Civil Engineering, Faculty of Engineering, Khon Kaen University — ระบบ CE F.A.I.R.',
+
+    // Wizard Steps
+    step0: 'Person Type',
+    step1: 'Info & Photo',
+    step2: 'Room, Time & Biometrics',
+    step3: 'Stage 1 Approver',
+    step4: 'Participants & Emergency',
+    step5: 'Sign & Submit',
+
+    // Person Types
+    selectPersonType: 'Please select applicant person type',
+    student: 'Student',
+    studentDesc: 'Bachelor, Master, Doctoral',
+    staff: 'Staff',
+    staffDesc: 'Faculty & Support Staff',
+    external: 'External Person',
+    externalDesc: 'External Researchers/Collaborators',
+    academicStaff: 'Academic Staff (Faculty)',
+    supportStaff: 'Support Staff',
+    bachelor: 'Bachelor Degree',
+    master: 'Master Degree',
+    doctoral: 'Doctoral Degree',
+
+    // Divisions
+    div1: 'Structural Engineering',
+    div2: 'Transportation Engineering',
+    div3: 'Construction Engineering & Management',
+    div4: 'Materials Engineering',
+    div5: 'Water Resources Engineering',
+    div6: 'Geotechnical Engineering',
+    div7: 'Survey Engineering',
+    divOther: 'Other / No Division',
+
+    // Form Fields
+    fullName: 'Full Name',
+    email: 'Email (Google Account)',
+    phone: 'Phone Number',
+    studentId: 'Student ID',
+    department: 'Department / Major',
+    faculty: 'Faculty',
+    division: 'Division',
+    externalOrg: 'Organization / Company',
+    projectTopic: 'Project / Research Topic',
+    justification: 'Justification',
+    selectRoom: 'Select Laboratory Room',
+    startDate: 'Start Date',
+    durationNotice: 'Default duration is 3 months (calculated automatically)',
+    allowedTimeStart: 'Allowed Time Start',
+    allowedTimeEnd: 'Allowed Time End',
+    biometricAppointmentDate: 'Requested Biometric Scan Appointment Date & Time (At Building with Admin)',
+    biometricDate: 'Appointment Date',
+    biometricTime: 'Appointment Time',
+    purpose: 'Purpose of Access',
+    purposePlaceholder: 'Describe details of laboratory usage...',
+    advisorSearchPlaceholder: 'Type to search advisor name or division...',
+    selectAdvisorOption: '-- Search and select advisor --',
+    participantNames: 'Participants (if any)',
+    emergencyContact: 'Emergency Contact Name and Phone Number',
+    emergencyPlaceholder: 'Full name and emergency phone number',
+    signaturePadTitle: 'Digital Signature (Application Consent)',
+    clearSignature: 'Clear',
+    consentText: 'I consent to the collection and processing of my personal data for system administration and security purposes of ระบบ CE F.A.I.R.',
+
+    // Photo Upload
+    photoUploadTitle: 'Applicant Photo / ID Card',
+    photoUploadHint: 'Click to upload photo (JPG, PNG, max 2MB) — Required',
+    photoChange: 'Change Photo',
+    photoRequired: 'Please upload an applicant photo before proceeding.',
+
+    // Stage 1 Titles
+    civilStudentStage1Title: '🎓 Stage 1: Advisor',
+    civilStudentStage1Desc: 'As a Civil Engineering student, please search and select your academic advisor based on division.',
+    nonCivilStage1Title: '🏛️ Stage 1: Head of Civil Engineering Department',
+    nonCivilStage1Desc: 'For other students, staff, and external applicants, this request will be automatically routed to the Head of Civil Engineering Department.',
+    nonCivilStage1Notice: '✅ Stage 1 approver is assigned automatically. Click "Next" to continue.',
+
+    // Buttons
+    btnNext: 'Next',
+    btnPrev: 'Previous',
+    btnSubmit: 'Submit Request',
+    btnSearch: 'Search',
+    btnExportCSV: 'Export CSV',
+    btnSave: 'Save',
+    btnCancel: 'Cancel',
+    btnClose: 'Close',
+    btnApprove: 'Approve',
+    btnReject: 'Reject',
+
+    // Dashboard & Analytics
+    kpiTotal: 'Total Requests',
+    kpiActive: 'Active Access',
+    kpiPending: 'Pending Review',
+    kpiSkipped: 'Auto-Skipped',
+    chartStatusTitle: '📊 Overall Request Status',
+    chartPersonTypeTitle: '👤 Person Type Breakdown',
+    chartDegreeLevelTitle: '🎓 Student Degree Level',
+    chartDivisionTitle: '🏗️ Division Distribution',
+    chartOutsideFacultyTitle: '🏛️ Outside Faculty / External',
+    chartAdvisorTitle: '👨‍🏫 Top Advisors (Top 10)',
+    chartMonthlyTitle: '📅 Monthly Request Frequency',
+    chartRoomUsageTitle: '🚪 Lab Room Usage',
+    roomsTitle: '🚪 Laboratory Rooms',
+    closuresTitle: '📢 Room Closure Notices',
+    colRoomId: 'Room ID',
+    colRoomName: 'Room Name',
+    colBuildingFloor: 'Building/Floor',
+    colCapacity: 'Capacity',
+    colStatus: 'Status',
+    colClosureTitle: 'Notice Title',
+    colClosureDates: 'Closure Period',
+    colClosureRooms: 'Affected Rooms',
+    noChartData: 'No data available for chart display',
+
+    // Approver Review Modal
+    reviewTitle: 'Review Room Access Request (ระบบ CE F.A.I.R.)',
+    applicantLabel: 'Applicant',
+    roomLabel: 'Room',
+    periodLabel: 'Requested Period',
+    noteLabel: 'Review Note / Reason',
+    adminAdjustStartDate: 'Adjust Approved Start Date (Admin Privileges)',
+    adminAdjustBiometric: 'Adjust Biometric Appointment Date & Time with Admin at Building',
+
+    // Statuses
+    Pending: 'Pending',
+    InReview: 'In Review',
+    Approved: 'Approved',
+    Active: 'Active',
+    Expired: 'Expired',
+    Rejected: 'Rejected',
+    Skipped: 'Auto-Skipped',
+    Scheduled: 'Scheduled',
+    Available: 'Available',
+    Maintenance: 'Maintenance',
+
+    // Messages
+    submitSuccessTitle: 'Submitted Successfully!',
+    loading: 'Processing...',
+    loadingLong: 'Please wait a moment...',
+    errorTitle: 'Error',
+    successTitle: 'Success',
+    noData: 'No data found'
+  }
+};
+
+// ==========================================
+// 1. Signature Pad Component
+// ==========================================
+const SignaturePad = {
+  props: ['t'],
+  emits: ['update:signature'],
+  data() {
+    return { isDrawing: false, ctx: null };
+  },
+  mounted() {
+    this.initCanvas();
+    window.addEventListener('resize', this.initCanvas);
+  },
+  beforeUnmount() {
+    window.removeEventListener('resize', this.initCanvas);
+  },
+  methods: {
+    initCanvas() {
+      const canvas = this.$refs.canvas;
+      if (!canvas) return;
+      this.ctx = canvas.getContext('2d');
+      canvas.width = canvas.offsetWidth || 400;
+      canvas.height = 170;
+      this.ctx.lineWidth = 2.5;
+      this.ctx.lineCap = 'round';
+      this.ctx.strokeStyle = '#183666';
+    },
+    startDrawing(e) {
+      this.isDrawing = true;
+      const pos = this.getPos(e);
+      this.ctx.beginPath();
+      this.ctx.moveTo(pos.x, pos.y);
+    },
+    draw(e) {
+      if (!this.isDrawing) return;
+      e.preventDefault();
+      const pos = this.getPos(e);
+      this.ctx.lineTo(pos.x, pos.y);
+      this.ctx.stroke();
+      this.$emit('update:signature', this.$refs.canvas.toDataURL('image/png'));
+    },
+    stopDrawing() { this.isDrawing = false; },
+    clear() {
+      const canvas = this.$refs.canvas;
+      this.ctx.clearRect(0, 0, canvas.width, canvas.height);
+      this.$emit('update:signature', '');
+    },
+    getPos(e) {
+      const rect = this.$refs.canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+  },
+  template: `
+    <div class="sig-canvas-wrap">
+      <canvas
+        ref="canvas" class="sig-canvas"
+        @mousedown="startDrawing" @mousemove="draw" @mouseup="stopDrawing" @mouseleave="stopDrawing"
+        @touchstart.passive="startDrawing" @touchmove.prevent="draw" @touchend="stopDrawing">
+      </canvas>
+      <button type="button" @click="clear" class="sig-clear">{{ t.clearSignature }}</button>
+    </div>
+  `
+};
+
+// ==========================================
+// Reusable UI Components
+// ==========================================
+const StatusBadge = {
+  props: {
+    status: { type: [String, Number], default: '' },
+    label: { type: String, default: '' }
+  },
+  computed: {
+    normalizedStatus() { return String(this.status || '').toLowerCase(); },
+    badgeClass() {
+      const map = {
+        approved: 'badge-approved', active: 'badge-active', available: 'badge-approved',
+        pending: 'badge-pending', rejected: 'badge-rejected', skipped: 'badge-skipped',
+        inactive: 'badge-rejected', expired: 'badge-rejected'
+      };
+      return map[this.normalizedStatus] || 'badge-pending';
+    }
+  },
+  template: `<span :class="['ui-badge', badgeClass]">{{ label || status || '-' }}</span>`
+};
+
+const RoomCard = {
+  props: { room: { type: Object, required: true }, t: { type: Object, default: () => ({}) } },
+  template: `
+    <article class="room-card">
+      <div class="room-card-image" v-if="room.imageUrl">
+        <img :src="room.imageUrl" :alt="room.roomName || room.roomId" loading="lazy" />
+      </div>
+      <div class="room-card-body">
+        <div class="room-card-title"><strong>{{ room.roomName || room.roomId }}</strong><status-badge :status="room.status" :label="t[room.status] || room.status"></status-badge></div>
+        <div class="room-card-meta">{{ room.roomId }} · {{ room.building || '-' }} - {{ room.floor || '-' }}</div>
+        <div class="room-card-meta">{{ t.colCapacity || 'ความจุ' }}: {{ room.capacity || '-' }}</div>
+        <div class="room-card-facilities" v-if="room.facilities">{{ room.facilities }}</div>
+      </div>
+    </article>
+  `
+};
+
+const ModalConfirm = {
+  props: {
+    show: { type: Boolean, default: false },
+    title: { type: String, default: 'ยืนยันการดำเนินการ' },
+    message: { type: String, default: 'คุณต้องการดำเนินการต่อหรือไม่?' },
+    confirmText: { type: String, default: 'ยืนยัน' },
+    cancelText: { type: String, default: 'ยกเลิก' }
+  },
+  emits: ['confirm', 'cancel'],
+  template: `
+    <div v-if="show" class="modal-overlay" @click.self="$emit('cancel')">
+      <div class="modal-content modal-confirm" role="dialog" aria-modal="true">
+        <div class="modal-header"><h3>{{ title }}</h3><button class="modal-close" @click="$emit('cancel')">&times;</button></div>
+        <div class="modal-body"><p>{{ message }}</p></div>
+        <div class="modal-footer"><button class="ui-btn ui-btn-outline" @click="$emit('cancel')">{{ cancelText }}</button><button class="ui-btn ui-btn-primary" @click="$emit('confirm')">{{ confirmText }}</button></div>
+      </div>
+    </div>
+  `
+};
+
+const TimelineStep = {
+  props: {
+    number: { type: [String, Number], required: true },
+    title: { type: String, required: true },
+    status: { type: String, default: 'Pending' },
+    note: { type: String, default: '' }
+  },
+  computed: {
+    isDone() { return ['Approved', 'Skipped'].includes(this.status); }
+  },
+  template: `
+    <div :class="['timeline-step', isDone ? 'timeline-step-done' : '']">
+      <div class="timeline-marker">{{ isDone ? '✓' : number }}</div>
+      <div class="timeline-content"><strong>{{ title }}</strong><status-badge :status="status"></status-badge><small v-if="note">{{ note }}</small></div>
+    </div>
+  `
+};
+
+const LoadingSpinner = {
+  props: { text: { type: String, default: '' } },
+  template: `<div class="loading-spinner" role="status" aria-live="polite"><div class="spin-circle"></div><span v-if="text">{{ text }}</span></div>`
+};
+
+// ==========================================
+// 2. Request View Component (Tab 1)
+// ==========================================
+const RequestView = {
+  props: ['lang', 't', 'userEmail'],
+  emits: ['loading', 'switch-to-dashboard'],
+  components: { SignaturePad },
+  data() {
+    return {
+      currentStep: 0,
+      rooms: [],
+      advisors: [],
+      advisorSearch: '',
+      isAdvisorOpen: false,
+      selectedAdvisorObj: null,
+      form: {
+        personType: 'Student',
+        staffType: '',
+        degreeLevel: 'Bachelor',
+        division: 'แผนกวิศวกรรมโครงสร้าง',
+        department: 'วิศวกรรมโยธา',
+        faculty: 'วิศวกรรมศาสตร์',
+        fullName: '',
+        email: this.userEmail || (window.PRELOADED_USER_EMAIL || ''),
+        phone: '',
+        studentId: '',
+        externalOrg: '',
+        projectTopic: '',
+        justification: '',
+        roomId: '',
+        purpose: '',
+        startDate: new Date().toISOString().split('T')[0],
+        allowedTimeStart: '16:30',
+        allowedTimeEnd: '20:00',
+        biometricAppointmentDate: '',
+        biometricDate: '',
+        biometricTime: '',
+        advisorEmail: '',
+        participantNames: '',
+        emergencyContact: '',
+        signatureData: '',
+        photoData: '',
+        consent: false
+      }
+    };
+  },
+  computed: {
+    isCivilStudent() {
+      const isStudent = this.form.personType === 'Student';
+      const isCivil = (this.form.department || '').indexOf('โยธา') !== -1 || (this.form.department || '').toLowerCase().indexOf('civil') !== -1;
+      const isEng = (this.form.faculty || '').indexOf('วิศว') !== -1 || (this.form.faculty || '').toLowerCase().indexOf('eng') !== -1 || !this.form.faculty;
+      return isStudent && isCivil && isEng;
+    },
+    filteredAdvisors() {
+      if (!this.advisorSearch) return this.advisors;
+      const q = this.advisorSearch.toLowerCase();
+      return this.advisors.filter(a =>
+        (a.fullName || '').toLowerCase().includes(q) ||
+        (a.division || '').toLowerCase().includes(q) ||
+        (a.email || '').toLowerCase().includes(q)
+      );
+    }
+  },
+  watch: {
+    userEmail(val) {
+      if (val && !this.form.email) this.form.email = val;
+    },
+    // เมื่อผู้ใช้พิมพ์ email เองบนมือถือ (กรณี account ไม่ตรง) → ดึงข้อมูลอัตโนมัติ
+    'form.email'(val) {
+      if (this._emailDebounce) clearTimeout(this._emailDebounce);
+      if (val && val.includes('@') && val.includes('.')) {
+        this._emailDebounce = setTimeout(() => this.fetchUserDataByEmail(val), 800);
+      }
+    }
+  },
+  async mounted() {
+    this.$emit('loading', true);
+    // โหลดห้อง + อาจารย์ + ข้อมูลผู้ใช้แบบขนาน (parallel) พร้อม cache ลด round-trip
+    const roomPromise = runGASCached('getRoomList', 10).then(rooms => {
+      this.rooms = Array.isArray(rooms) ? rooms : [];
+      if (this.rooms.length > 0) this.form.roomId = this.rooms[0].roomId;
+    }).catch(e => console.error('Failed to load rooms:', e));
+
+    const advisorPromise = runGASCached('getAdvisorList', 30).then(advisors => {
+      this.advisors = Array.isArray(advisors) ? advisors : [];
+    }).catch(e => console.error('Failed to load advisors:', e));
+
+    const userPromise = this.form.email
+      ? this.fetchUserDataByEmail(this.form.email).catch(e => console.error('Failed to load user data:', e))
+      : Promise.resolve();
+
+    await Promise.all([roomPromise, advisorPromise, userPromise]);
+    this.$emit('loading', false);
+  },
+  methods: {
+    async fetchUserDataByEmail(email) {
+      try {
+        const userData = await runGAS('getUserByEmail', email);
+        if (userData && userData.fullName) {
+          this.form.fullName = userData.fullName || '';
+          this.form.phone = formatPhoneNumber(userData.phone || '');
+          this.form.studentId = formatStudentId(userData.studentId || '');
+          this.form.department = userData.department || 'วิศวกรรมโยธา';
+          this.form.division = userData.division || 'แผนกวิศวกรรมโครงสร้าง';
+        }
+      } catch (e) {
+        console.warn('fetchUserDataByEmail:', e);
+      }
+    },
+    onStudentIdInput(e) {
+      this.form.studentId = formatStudentId(e.target.value);
+    },
+    onPhoneInput(e) {
+      this.form.phone = formatPhoneNumber(e.target.value);
+    },
+    selectAdvisor(adv) {
+      this.selectedAdvisorObj = adv;
+      this.form.advisorEmail = adv.email;
+      this.advisorSearch = `${adv.fullName} (${adv.division})`;
+      this.isAdvisorOpen = false;
+    },
+    clearAdvisorSearch() {
+      this.selectedAdvisorObj = null;
+      this.form.advisorEmail = '';
+      this.advisorSearch = '';
+    },
+    handlePhoto(e) {
+      const file = e.target.files ? e.target.files[0] : null;
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) {
+        Swal.fire(this.t.errorTitle, 'ขนาดไฟล์ภาพเกิน 2MB', 'warning');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => { this.form.photoData = event.target.result; };
+      reader.readAsDataURL(file);
+    },
+    nextStep() {
+      if (this.currentStep === 1) {
+        if (!this.form.fullName || !this.form.email || !this.form.phone || !this.form.department) {
+          Swal.fire(this.t.errorTitle, 'กรุณากรอกข้อมูลที่มีเครื่องหมาย * ให้ครบถ้วน', 'warning');
+          return;
+        }
+        if (this.form.personType === 'Student' && !this.form.studentId) {
+          Swal.fire(this.t.errorTitle, 'กรุณากรอกรหัสนักศึกษา', 'warning');
+          return;
+        }
+        if (!this.form.photoData) {
+          Swal.fire(this.t.errorTitle, this.t.photoRequired, 'warning');
+          return;
+        }
+      }
+      if (this.currentStep === 2) {
+        if (!this.form.roomId || !this.form.startDate || !this.form.biometricDate || !this.form.biometricTime || !this.form.purpose) {
+          Swal.fire(this.t.errorTitle, 'กรุณากรอกข้อมูลห้อง, วันเวลา และนัดหมาย Biometric ให้ครบถ้วน', 'warning');
+          return;
+        }
+      }
+      if (this.currentStep === 3) {
+        if (this.isCivilStudent && !this.form.advisorEmail) {
+          Swal.fire(this.t.errorTitle, 'กรุณาค้นหาและเลือกอาจารย์ที่ปรึกษา', 'warning');
+          return;
+        }
+      }
+      if (this.currentStep === 4) {
+        if (!this.form.emergencyContact) {
+          Swal.fire(this.t.errorTitle, 'กรุณาระบุชื่อ และเบอร์โทร. ผู้ติดต่อ กรณีฉุกเฉิน', 'warning');
+          return;
+        }
+      }
+      this.currentStep++;
+    },
+    prevStep() { this.currentStep--; },
+    async submitForm() {
+      if (!this.form.consent) {
+        Swal.fire(this.t.errorTitle, 'กรุณายินยอมเงื่อนไขก่อนส่งคำขอ', 'warning');
+        return;
+      }
+      if (!this.form.signatureData) {
+        Swal.fire(this.t.errorTitle, 'กรุณาลงลายมือชื่อดิจิทัล', 'warning');
+        return;
+      }
+      if (!this.form.photoData) {
+        Swal.fire(this.t.errorTitle, this.t.photoRequired, 'warning');
+        return;
+      }
+
+      // รวมวันที่ + เวลา Biometric เป็น datetime string ก่อนส่ง
+      if (this.form.biometricDate && this.form.biometricTime) {
+        this.form.biometricAppointmentDate = this.form.biometricDate + 'T' + this.form.biometricTime + ':00';
+      }
+
+      this.$emit('loading', true);
+      try {
+        const res = await runGAS('submitRequest', this.form);
+      gasCacheClear(); // ข้อมูลเปลี่ยนหลัง submit — ล้าง cache เพื่อให้ Dashboard สดเสมอ
+        if (res.success) {
+          Swal.fire({
+            title: this.t.submitSuccessTitle,
+            html: `
+              <div style="text-align:left;font-size:14px;line-height:1.8;">
+                <p><b>เลขที่คำขอ:</b> <span style="color:#661003;font-weight:bold;">${res.requestId}</span></p>
+                <p><b>Access Code:</b> <span style="color:#183666;font-weight:bold;font-size:18px;">${res.accessCode || '-'}</span></p>
+                <p><b>สถานะ:</b> ${this.t[res.overallStatus] || res.overallStatus}</p>
+              </div>
+            `,
+            icon: 'success',
+            confirmButtonText: this.t.btnClose
+          }).then(() => {
+            this.$emit('switch-to-dashboard');
+          });
+        }
+      } catch (err) {
+        Swal.fire(this.t.errorTitle, err.message, 'error');
+      } finally {
+        this.$emit('loading', false);
+      }
+    }
+  },
+  template: `
+    <div>
+      <!-- Stepper Header -->
+      <div class="stepper-wrap">
+        <div v-for="(name, idx) in [t.step0, t.step1, t.step2, t.step3, t.step4, t.step5]" :key="idx" class="step-item">
+          <div :class="['step-bubble', currentStep === idx ? 'active' : (currentStep > idx ? 'done' : '')]">
+            {{ idx + 1 }}
+          </div>
+          <span :class="['step-text', currentStep === idx ? 'active' : '']">{{ name }}</span>
+        </div>
+      </div>
+
+      <div class="box-card">
+        <div class="box-header">
+          <span>{{ t['step' + currentStep] }}</span>
+        </div>
+
+        <div class="box-body">
+
+          <!-- Step 0: Person Type -->
+          <div v-if="currentStep === 0" class="form-grid">
+            <h3 style="text-align:center;font-weight:700;color:#183666;margin-bottom:0.5rem;">{{ t.selectPersonType }}</h3>
+            <div class="type-selector">
+              <div :class="['type-card', form.personType === 'Student' ? 'active' : '']" @click="form.personType = 'Student'">
+                <div class="type-icon">🎓</div>
+                <h4 style="font-weight:700;">{{ t.student }}</h4>
+                <p style="font-size:0.75rem;color:#64748b;margin-top:4px;">{{ t.studentDesc }}</p>
+              </div>
+
+              <div :class="['type-card', form.personType === 'Staff' ? 'active' : '']" @click="form.personType = 'Staff'">
+                <div class="type-icon">🏛️</div>
+                <h4 style="font-weight:700;">{{ t.staff }}</h4>
+                <p style="font-size:0.75rem;color:#64748b;margin-top:4px;">{{ t.staffDesc }}</p>
+              </div>
+
+              <div :class="['type-card', form.personType === 'External' ? 'active' : '']" @click="form.personType = 'External'">
+                <div class="type-icon">🌐</div>
+                <h4 style="font-weight:700;">{{ t.external }}</h4>
+                <p style="font-size:0.75rem;color:#64748b;margin-top:4px;">{{ t.externalDesc }}</p>
+              </div>
+            </div>
+
+            <div v-if="form.personType === 'Student'" class="form-field" style="margin-top:1rem;">
+              <label class="field-label">{{ t.degreeLevel }} <span class="req">*</span></label>
+              <select v-model="form.degreeLevel" class="field-select">
+                <option value="Bachelor">{{ t.bachelor }}</option>
+                <option value="Master">{{ t.master }}</option>
+                <option value="Doctoral">{{ t.doctoral }}</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Step 1: Info & Photo -->
+          <div v-if="currentStep === 1" class="form-grid">
+            <div class="photo-box" @click="$refs.photoInput.click()">
+              <label class="field-label" style="margin-bottom:6px;">{{ t.photoUploadTitle }} <span class="req">*</span></label>
+              <div v-if="form.photoData">
+                <img :src="form.photoData" alt="Preview" class="photo-preview">
+                <p style="font-size:0.75rem;color:#661003;font-weight:700;">{{ t.photoChange }}</p>
+              </div>
+              <div v-else style="padding:10px 0;">
+                <div style="font-size:2rem;">📷</div>
+                <p style="font-size:0.8rem;color:#475569;font-weight:600;">{{ t.photoUploadHint }}</p>
+              </div>
+              <input ref="photoInput" type="file" accept="image/*" style="display:none;" @change="handlePhoto">
+            </div>
+
+            <div class="form-grid form-grid-2">
+              <div class="form-field">
+                <label class="field-label">{{ t.email }} <span class="req">*</span></label>
+                <input type="email" v-model="form.email" class="field-input" required>
+              </div>
+              <div class="form-field">
+                <label class="field-label">{{ t.fullName }} <span class="req">*</span></label>
+                <input type="text" v-model="form.fullName" class="field-input" required>
+              </div>
+              <div class="form-field">
+                <label class="field-label">{{ t.phone }} <span class="req">*</span></label>
+                <input type="tel" :value="form.phone" @input="onPhoneInput" placeholder="081-234-5678" maxlength="12" class="field-input" required>
+              </div>
+              <div v-if="form.personType === 'Student'" class="form-field">
+                <label class="field-label">{{ t.studentId }} <span class="req">*</span></label>
+                <input type="text" :value="form.studentId" @input="onStudentIdInput" placeholder="643040123-4" maxlength="11" class="field-input" required>
+              </div>
+              <div class="form-field">
+                <label class="field-label">{{ t.department }} <span class="req">*</span></label>
+                <input type="text" v-model="form.department" class="field-input" required>
+              </div>
+              <div class="form-field">
+                <label class="field-label">{{ t.division }}</label>
+                <select v-model="form.division" class="field-select">
+                  <option value="แผนกวิศวกรรมโครงสร้าง">{{ t.div1 }}</option>
+                  <option value="แผนกวิศวกรรมขนส่ง">{{ t.div2 }}</option>
+                  <option value="แผนกวิศวกรรมการบริหารงานก่อสร้าง">{{ t.div3 }}</option>
+                  <option value="แผนกวิศวกรรมวัสดุ">{{ t.div4 }}</option>
+                  <option value="แผนกวิศวกรรมทรัพยากรน้ำ">{{ t.div5 }}</option>
+                  <option value="แผนกวิศวกรรมปฐพี">{{ t.div6 }}</option>
+                  <option value="แผนกวิศวกรรมสำรวจ">{{ t.div7 }}</option>
+                  <option value="ต่างสาขา / ต่างคณะ / ไม่มีแผนก">{{ t.divOther }}</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label class="field-label">{{ t.faculty }}</label>
+                <input type="text" v-model="form.faculty" class="field-input">
+              </div>
+              <div v-if="form.personType === 'External'" class="form-field">
+                <label class="field-label">{{ t.externalOrg }} <span class="req">*</span></label>
+                <input type="text" v-model="form.externalOrg" class="field-input" required>
+              </div>
+              <div class="form-field md:col-span-2">
+                <label class="field-label">{{ t.projectTopic }}</label>
+                <input type="text" v-model="form.projectTopic" class="field-input">
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2: Room, Time & Biometrics -->
+          <div v-if="currentStep === 2" class="form-grid">
+            <div class="form-field">
+              <label class="field-label">{{ t.selectRoom }} <span class="req">*</span></label>
+              <select v-model="form.roomId" class="field-select">
+                <option v-for="r in rooms" :key="r.roomId" :value="r.roomId">
+                  {{ r.roomName }} ({{ r.building }} - {{ r.floor }}) [{{ t[r.status] || r.status }}]
+                </option>
+              </select>
+            </div>
+
+            <div class="form-grid form-grid-3">
+              <div class="form-field">
+                <label class="field-label">{{ t.startDate }} <span class="req">*</span></label>
+                <input type="date" v-model="form.startDate" class="field-input" required>
+                <span style="font-size:11px;color:#64748b;margin-top:2px;">{{ t.durationNotice }}</span>
+              </div>
+              <div class="form-field">
+                <label class="field-label">{{ t.allowedTimeStart }} <span class="req">*</span></label>
+                <input type="time" v-model="form.allowedTimeStart" class="field-input" required>
+              </div>
+              <div class="form-field">
+                <label class="field-label">{{ t.allowedTimeEnd }} <span class="req">*</span></label>
+                <input type="time" v-model="form.allowedTimeEnd" class="field-input" required>
+              </div>
+            </div>
+
+            <div class="form-field" style="background:#f8fafc;padding:14px;border-radius:8px;border:1px solid #e2e8f0;">
+              <label class="field-label" style="color:#183666;font-weight:700;">{{ t.biometricAppointmentDate }} <span class="req">*</span></label>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px;">
+                <div class="form-field">
+                  <label class="field-label" style="font-size:0.78rem;color:#475569;">{{ t.biometricDate }} <span class="req">*</span></label>
+                  <input type="date" v-model="form.biometricDate" class="field-input" required>
+                </div>
+                <div class="form-field">
+                  <label class="field-label" style="font-size:0.78rem;color:#475569;">{{ t.biometricTime }} <span class="req">*</span></label>
+                  <input type="time" v-model="form.biometricTime" class="field-input" required>
+                </div>
+              </div>
+              <p style="font-size:11px;color:#64748b;margin-top:6px;">* วันที่และเวลาที่สะดวกเข้ามาติดต่อบันทึกข้อมูลชีวมิติกับหัวหน้าตึก/Admin ณ อาคารปฏิบัติการ</p>
+            </div>
+
+            <div class="form-field">
+              <label class="field-label">{{ t.purpose }} <span class="req">*</span></label>
+              <textarea v-model="form.purpose" class="field-input" rows="2" :placeholder="t.purposePlaceholder" required></textarea>
+            </div>
+          </div>
+
+          <!-- Step 3: Stage 1 Approver with Searchable Combobox -->
+          <div v-if="currentStep === 3" class="form-grid">
+            <div v-if="isCivilStudent" style="background:#f0fdf4;padding:15px;border-radius:8px;border:1px solid #bbf7d0;">
+              <h4 style="font-weight:700;color:#065f46;font-size:14px;">{{ t.civilStudentStage1Title }}</h4>
+              <p style="font-size:13px;color:#166534;margin:4px 0 10px 0;">{{ t.civilStudentStage1Desc }}</p>
+              
+              <!-- Searchable Advisor Combobox -->
+              <div class="combobox-wrap">
+                <div style="position:relative;">
+                  <input
+                    type="text"
+                    v-model="advisorSearch"
+                    @focus="isAdvisorOpen = true"
+                    class="field-input"
+                    :placeholder="t.advisorSearchPlaceholder">
+                  <button v-if="advisorSearch" type="button" @click="clearAdvisorSearch" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;cursor:pointer;color:#94a3b8;font-size:16px;">&times;</button>
+                </div>
+
+                <div v-if="isAdvisorOpen" class="combobox-dropdown">
+                  <div
+                    v-for="adv in filteredAdvisors"
+                    :key="adv.advisorId"
+                    :class="['combobox-item', form.advisorEmail === adv.email ? 'selected' : '']"
+                    @click="selectAdvisor(adv)">
+                    <div style="font-weight:600;">{{ adv.fullName }}</div>
+                    <div style="font-size:11px;color:#64748b;">แผนก: {{ adv.division }} | {{ adv.email }}</div>
+                  </div>
+                  <div v-if="filteredAdvisors.length === 0" style="padding:10px;text-align:center;color:#94a3b8;font-size:12px;">
+                    {{ t.noData }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div v-else style="background:#f0f9ff;padding:15px;border-radius:8px;border:1px solid #bae6fd;">
+              <h4 style="font-weight:700;color:#0369a1;font-size:14px;">{{ t.nonCivilStage1Title }}</h4>
+              <p style="font-size:13px;color:#0c4a6e;margin:4px 0 8px 0;">{{ t.nonCivilStage1Desc }}</p>
+              <p style="font-size:12px;color:#64748b;">{{ t.nonCivilStage1Notice }}</p>
+            </div>
+          </div>
+
+          <!-- Step 4: Participants & Emergency -->
+          <div v-if="currentStep === 4" class="form-grid">
+            <div class="form-field">
+              <label class="field-label">{{ t.participantNames }}</label>
+              <textarea v-model="form.participantNames" class="field-input" rows="2" placeholder="ระบุชื่อผู้ร่วมใช้งาน..."></textarea>
+            </div>
+            <div class="form-field">
+              <label class="field-label">{{ t.emergencyContact }} <span class="req">*</span></label>
+              <input type="text" v-model="form.emergencyContact" class="field-input" :placeholder="t.emergencyPlaceholder" required>
+            </div>
+          </div>
+
+          <!-- Step 5: Digital Signature & Submit -->
+          <div v-if="currentStep === 5" class="form-grid">
+            <div class="form-field">
+              <label class="field-label">{{ t.signaturePadTitle }} <span class="req">*</span></label>
+              <signature-pad :t="t" @update:signature="form.signatureData = $event"></signature-pad>
+            </div>
+            <div style="margin-top:10px;">
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:#475569;cursor:pointer;">
+                <input type="checkbox" v-model="form.consent" style="margin-top:3px;">
+                <span>{{ t.consentText }}</span>
+              </label>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="box-footer">
+          <button v-if="currentStep > 0" @click="prevStep" class="ui-btn ui-btn-outline">
+            &larr; {{ t.btnPrev }}
+          </button>
+          <div v-else></div>
+
+          <button v-if="currentStep < 5" @click="nextStep" class="ui-btn ui-btn-primary">
+            {{ t.btnNext }} &rarr;
+          </button>
+          <button v-else @click="submitForm" class="ui-btn ui-btn-primary" :disabled="!form.consent || !form.signatureData || !form.photoData">
+            {{ t.btnSubmit }}
+          </button>
+        </div>
+      </div>
+    </div>
+  `
+};
+
+// ==========================================
+// 3. Dashboard View Component (Tab 2)
+// ==========================================
+const DashboardView = {
+  props: ['lang', 't', 'userEmail', 'userRole'],
+  emits: ['loading'],
+  data() {
+    return {
+      stats: {},
+      rooms: [],
+      closures: [],
+      chartInstances: {},
+      // Review Modal (when opened from email token or clicked)
+      showReviewModal: false,
+      reviewData: null,
+      reviewToken: '',
+      reviewStage: 1,
+      reviewNote: '',
+      adminStartDate: '',
+      adminBiometricDate: '',
+      isReadOnly: false
+    };
+  },
+  components: { ReviewModal, StatusBadge, RoomCard, ModalConfirm, TimelineStep, LoadingSpinner },
+  async mounted() {
+    this.$emit('loading', true);
+    try {
+      const [stats, rooms, closures] = await Promise.all([
+        runGASCached('getDashboardStats', 2),
+        runGASCached('getRoomList', 10),
+        runGASCached('getRoomClosureList', 5)
+      ]);
+      this.stats = stats || {};
+      this.rooms = rooms || [];
+      this.closures = closures || [];
+
+      // Check URL parameters for direct Token Review
+      const urlParams = new URLSearchParams(window.location.search);
+      const getParam = (key) => urlParams.get(key) || (window.SERVER_PARAMS && window.SERVER_PARAMS[key]);
+      const token = getParam('token');
+      const stage = getParam('stage');
+      const view = getParam('view');
+
+      if (token && (stage || view === 'approver' || view === 'status')) {
+        await this.openReviewModal(token, stage || 1, view === 'status');
+      }
+
+      this.$nextTick(() => this.renderAllCharts());
+    } catch (e) {
+      console.error(e);
+    } finally {
+      this.$emit('loading', false);
+    }
+  },
+  methods: {
+    destroyChart(id) {
+      if (this.chartInstances[id]) {
+        this.chartInstances[id].destroy();
+        delete this.chartInstances[id];
+      }
+    },
+    makeChart(id, type, labels, data, colors, options = {}) {
+      this.destroyChart(id);
+      const ctx = document.getElementById(id);
+      if (!ctx) return;
+      const defaultColors = ['#661003','#10B981','#3B82F6','#F59E0B','#8B5CF6','#EF4444','#06B6D4','#F97316','#84CC16','#EC4899','#6366F1','#14B8A6'];
+      this.chartInstances[id] = new Chart(ctx, {
+        type,
+        data: {
+          labels,
+          datasets: [{
+            data,
+            backgroundColor: colors || defaultColors.slice(0, data.length),
+            borderColor: type === 'line' ? (colors ? colors[0] : '#661003') : 'transparent',
+            borderWidth: type === 'line' ? 2 : 0,
+            fill: type === 'line',
+            tension: 0.4,
+            pointBackgroundColor: '#661003',
+            pointRadius: 4,
+            ...options.datasetOptions
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: type === 'bar' || type === 'line' ? 'top' : 'bottom', labels: { font: { family: 'Sarabun', size: 12 }, boxWidth: 14 } },
+            tooltip: { callbacks: { label: ctx => ` ${ctx.label || ctx.dataset.label || ''}: ${ctx.parsed.y ?? ctx.parsed} คน/คำขอ` } }
+          },
+          scales: (type === 'bar' || type === 'line') ? {
+            x: { ticks: { font: { family: 'Sarabun', size: 11 }, maxRotation: 30 }, grid: { display: false } },
+            y: { beginAtZero: true, ticks: { font: { family: 'Sarabun', size: 11 }, stepSize: 1 }, grid: { color: '#f1f5f9' } }
+          } : undefined,
+          ...options.chartOptions
+        }
+      });
+    },
+    renderAllCharts() {
+      const s = this.stats;
+
+      // 1. Status Doughnut
+      if (s.statusStats && Object.keys(s.statusStats).length) {
+        this.makeChart('chart-status', 'doughnut',
+          Object.keys(s.statusStats).map(k => this.t[k] || k),
+          Object.values(s.statusStats),
+          ['#10B981','#F59E0B','#3B82F6','#EF4444','#9CA3AF','#661003','#8B5CF6']
+        );
+      }
+
+      // 2. Person Type Bar
+      if (s.personTypeStats && Object.keys(s.personTypeStats).length) {
+        const ptMap = { Student: 'นักศึกษา', Staff: 'บุคลากร', External: 'บุคคลภายนอก' };
+        this.makeChart('chart-persontype', 'bar',
+          Object.keys(s.personTypeStats).map(k => ptMap[k] || k),
+          Object.values(s.personTypeStats),
+          ['#3B82F6','#8B5CF6','#F97316']
+        );
+      }
+
+      // 3. Degree Level Doughnut
+      if (s.degreeLevelStats && Object.keys(s.degreeLevelStats).length) {
+        const dlMap = { Bachelor: 'ปริญญาตรี', Master: 'ปริญญาโท', Doctoral: 'ปริญญาเอก' };
+        this.makeChart('chart-degree', 'doughnut',
+          Object.keys(s.degreeLevelStats).map(k => dlMap[k] || k),
+          Object.values(s.degreeLevelStats),
+          ['#661003','#F59E0B','#3B82F6']
+        );
+      }
+
+      // 4. Division Bar (horizontal via bar with indexAxis)
+      if (s.divisionStats && Object.keys(s.divisionStats).length) {
+        const divLabels = Object.keys(s.divisionStats).map(k => k.replace('แผนกวิศวกรรม','').replace('วิศวกรรม',''));
+        this.destroyChart('chart-division');
+        const ctx = document.getElementById('chart-division');
+        if (ctx) {
+          this.chartInstances['chart-division'] = new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: divLabels,
+              datasets: [{ data: Object.values(s.divisionStats), backgroundColor: '#661003', borderRadius: 4 }]
+            },
+            options: {
+              indexAxis: 'y',
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: {
+                x: { beginAtZero: true, ticks: { font: { family: 'Sarabun', size: 11 }, stepSize: 1 }, grid: { color: '#f1f5f9' } },
+                y: { ticks: { font: { family: 'Sarabun', size: 11 } }, grid: { display: false } }
+              }
+            }
+          });
+        }
+      }
+
+      // 5. Outside Faculty / External Pie
+      if (s.outsideFacultyStats && Object.keys(s.outsideFacultyStats).length) {
+        const ofMap = { civil: 'โยธา (ในสาขา)', nonCivil: 'ต่างสาขา/คณะ', external: 'บุคคลภายนอก' };
+        this.makeChart('chart-outside', 'pie',
+          Object.keys(s.outsideFacultyStats).map(k => ofMap[k] || k),
+          Object.values(s.outsideFacultyStats),
+          ['#183666','#F59E0B','#EF4444']
+        );
+      }
+
+      // 6. Top Advisors Bar
+      if (s.advisorStats && Object.keys(s.advisorStats).length) {
+        const sorted = Object.entries(s.advisorStats).sort((a,b)=>b[1]-a[1]).slice(0,10);
+        this.makeChart('chart-advisor', 'bar',
+          sorted.map(([k]) => k.split(' ').slice(0,3).join(' ')),
+          sorted.map(([,v]) => v),
+          sorted.map((_,i) => `hsl(${210+i*15},60%,${45+i*3}%)`)
+        );
+      }
+
+      // 7. Monthly Frequency Line
+      if (s.monthlyStats && Object.keys(s.monthlyStats).length) {
+        this.makeChart('chart-monthly', 'line',
+          Object.keys(s.monthlyStats),
+          Object.values(s.monthlyStats),
+          ['rgba(24,54,102,0.25)'],
+          { datasetOptions: { borderColor: '#183666', backgroundColor: 'rgba(24,54,102,0.1)', fill: true } }
+        );
+      }
+
+      // 8. Room Usage Bar
+      if (s.roomUsageStats && Object.keys(s.roomUsageStats).length) {
+        this.makeChart('chart-room', 'bar',
+          Object.keys(s.roomUsageStats),
+          Object.values(s.roomUsageStats),
+          ['#10B981','#3B82F6','#F59E0B','#8B5CF6','#EF4444','#F97316']
+        );
+      }
+    },
+    async openReviewModal(token, stage, isReadOnly = false) {
+      this.$emit('loading', true);
+      this.reviewToken = token;
+      this.reviewStage = Number(stage || 1);
+      this.isReadOnly = isReadOnly;
+      try {
+        const res = await runGAS('getApprovalRequestByToken', token, this.isReadOnly ? null : this.reviewStage);
+        if (res.success) {
+          this.reviewData = res;
+          this.adminStartDate = res.startDate || '';
+          this.adminBiometricDate = res.biometricAppointmentDate || '';
+          this.showReviewModal = true;
+        } else {
+          Swal.fire(this.t.errorTitle, res.message || 'Token ไม่ถูกต้องหรือหมดอายุแล้ว', 'error');
+        }
+      } catch (err) {
+        Swal.fire(this.t.errorTitle, err.message, 'error');
+      } finally {
+        this.$emit('loading', false);
+      }
+    },
+    async submitDecision(decision) {
+      if (decision === 'Reject' && !this.reviewNote) {
+        Swal.fire(this.t.errorTitle, 'กรุณาระบุเหตุผลในการปฏิเสธ', 'warning');
+        return;
+      }
+
+      this.$emit('loading', true);
+      try {
+        const extra = {};
+        if (this.reviewStage === 4 && decision === 'Approve') {
+          if (this.adminStartDate) extra.startDate = this.adminStartDate;
+          if (this.adminBiometricDate) extra.biometricAppointmentDate = this.adminBiometricDate;
+        }
+
+        const res = await runGAS('processApproval', this.reviewData.requestId, this.reviewStage, decision, this.reviewNote, this.reviewToken, extra);
+        gasCacheClear(); // สถานะคำขอเปลี่ยน — ล้าง cache ให้ stats สดเสมอ
+        if (res.success) {
+          Swal.fire({
+            title: decision === 'Approve' ? this.t.Approved : this.t.Rejected,
+            text: `คำขอเลขที่: ${this.reviewData.requestId}`,
+            icon: 'success'
+          }).then(() => {
+            this.showReviewModal = false;
+            this.reviewData = null;
+          });
+        }
+      } catch (err) {
+        Swal.fire(this.t.errorTitle, err.message, 'error');
+      } finally {
+        this.$emit('loading', false);
+      }
+    },
+    async exportCSV() {
+      this.$emit('loading', true);
+      try {
+        const csv = await runGAS('exportRequestsToCSV', {});
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `ce_fair_requests_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+      } catch (err) {
+        Swal.fire(this.t.errorTitle, 'Export failed', 'error');
+      } finally {
+        this.$emit('loading', false);
+      }
+    }
+  },
+  template: `
+    <div style="display:flex;flex-direction:column;gap:1.5rem;">
+
+      <!-- KPI Stats -->
+      <div class="kpi-grid">
+        <div class="kpi-box" style="border-left-color:#661003;">
+          <div class="kpi-num" style="color:#661003;">{{ stats.totalRequests || 0 }}</div>
+          <div class="kpi-sub">{{ t.kpiTotal }}</div>
+        </div>
+        <div class="kpi-box" style="border-left-color:#10B981;">
+          <div class="kpi-num" style="color:#10B981;">{{ stats.activeRequests || 0 }}</div>
+          <div class="kpi-sub">{{ t.kpiActive }}</div>
+        </div>
+        <div class="kpi-box" style="border-left-color:#F59E0B;">
+          <div class="kpi-num" style="color:#F59E0B;">{{ stats.pendingRequests || 0 }}</div>
+          <div class="kpi-sub">{{ t.kpiPending }}</div>
+        </div>
+        <div class="kpi-box" style="border-left-color:#64748b;">
+          <div class="kpi-num" style="color:#64748b;">{{ stats.skippedCount || 0 }}</div>
+          <div class="kpi-sub">{{ t.kpiSkipped }}</div>
+        </div>
+      </div>
+
+      <!-- Analytics Section Header -->
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <h2 style="font-size:1.05rem;font-weight:700;color:#183666;margin:0;">📈 การวิเคราะห์ข้อมูลคำขอ</h2>
+        <button @click="exportCSV" class="ui-btn ui-btn-outline ui-btn-sm">{{ t.btnExportCSV }}</button>
+      </div>
+
+      <!-- Row 1: Status + Person Type -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.25rem;">
+
+        <!-- Chart 1: Status Doughnut -->
+        <div class="box-card">
+          <div class="box-header" style="padding:12px 16px;">
+            <span style="font-size:0.9rem;">{{ t.chartStatusTitle }}</span>
+          </div>
+          <div class="box-body" style="padding:16px;">
+            <div style="position:relative;height:240px;">
+              <canvas id="chart-status"></canvas>
+              <div v-if="!stats.statusStats || !Object.keys(stats.statusStats||{}).length"
+                   style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:13px;">
+                {{ t.noChartData }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chart 2: Person Type Bar -->
+        <div class="box-card">
+          <div class="box-header" style="padding:12px 16px;">
+            <span style="font-size:0.9rem;">{{ t.chartPersonTypeTitle }}</span>
+          </div>
+          <div class="box-body" style="padding:16px;">
+            <div style="position:relative;height:240px;">
+              <canvas id="chart-persontype"></canvas>
+              <div v-if="!stats.personTypeStats || !Object.keys(stats.personTypeStats||{}).length"
+                   style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:13px;">
+                {{ t.noChartData }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chart 3: Degree Level Doughnut -->
+        <div class="box-card">
+          <div class="box-header" style="padding:12px 16px;">
+            <span style="font-size:0.9rem;">{{ t.chartDegreeLevelTitle }}</span>
+          </div>
+          <div class="box-body" style="padding:16px;">
+            <div style="position:relative;height:240px;">
+              <canvas id="chart-degree"></canvas>
+              <div v-if="!stats.degreeLevelStats || !Object.keys(stats.degreeLevelStats||{}).length"
+                   style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:13px;">
+                {{ t.noChartData }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Row 2: Division (full width, horizontal bar) -->
+      <div class="box-card">
+        <div class="box-header" style="padding:12px 16px;">
+          <span style="font-size:0.9rem;">{{ t.chartDivisionTitle }}</span>
+        </div>
+        <div class="box-body" style="padding:16px;">
+          <div style="position:relative;height:280px;">
+            <canvas id="chart-division"></canvas>
+            <div v-if="!stats.divisionStats || !Object.keys(stats.divisionStats||{}).length"
+                 style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:13px;">
+              {{ t.noChartData }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 3: Outside Faculty + Room Usage -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.25rem;">
+
+        <!-- Chart 5: Outside Faculty Pie -->
+        <div class="box-card">
+          <div class="box-header" style="padding:12px 16px;">
+            <span style="font-size:0.9rem;">{{ t.chartOutsideFacultyTitle }}</span>
+          </div>
+          <div class="box-body" style="padding:16px;">
+            <div style="position:relative;height:240px;">
+              <canvas id="chart-outside"></canvas>
+              <div v-if="!stats.outsideFacultyStats || !Object.keys(stats.outsideFacultyStats||{}).length"
+                   style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:13px;">
+                {{ t.noChartData }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chart 8: Room Usage Bar -->
+        <div class="box-card">
+          <div class="box-header" style="padding:12px 16px;">
+            <span style="font-size:0.9rem;">{{ t.chartRoomUsageTitle }}</span>
+          </div>
+          <div class="box-body" style="padding:16px;">
+            <div style="position:relative;height:240px;">
+              <canvas id="chart-room"></canvas>
+              <div v-if="!stats.roomUsageStats || !Object.keys(stats.roomUsageStats||{}).length"
+                   style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:13px;">
+                {{ t.noChartData }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Row 4: Advisor Top 10 (full width) -->
+      <div class="box-card">
+        <div class="box-header" style="padding:12px 16px;">
+          <span style="font-size:0.9rem;">{{ t.chartAdvisorTitle }}</span>
+        </div>
+        <div class="box-body" style="padding:16px;">
+          <div style="position:relative;height:280px;">
+            <canvas id="chart-advisor"></canvas>
+            <div v-if="!stats.advisorStats || !Object.keys(stats.advisorStats||{}).length"
+                 style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:13px;">
+              {{ t.noChartData }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 5: Monthly Frequency Line (full width) -->
+      <div class="box-card">
+        <div class="box-header" style="padding:12px 16px;">
+          <span style="font-size:0.9rem;">{{ t.chartMonthlyTitle }}</span>
+        </div>
+        <div class="box-body" style="padding:16px;">
+          <div style="position:relative;height:260px;">
+            <canvas id="chart-monthly"></canvas>
+            <div v-if="!stats.monthlyStats || !Object.keys(stats.monthlyStats||{}).length"
+                 style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:13px;">
+              {{ t.noChartData }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Room List & Closures Grid -->
+      <div style="display:grid;grid-template-columns:1fr;gap:1.5rem;">
+
+        <!-- Room List -->
+        <div class="box-card">
+          <div class="box-header">
+            <span>{{ t.roomsTitle }} ({{ rooms.length }})</span>
+          </div>
+          <div class="room-card-grid">
+            <room-card v-for="r in rooms" :key="r.roomId" :room="r" :t="t"></room-card>
+          </div>
+        </div>
+
+        <!-- Room Closures -->
+        <div v-if="closures.length > 0" class="box-card">
+          <div class="box-header">
+            <span>{{ t.closuresTitle }}</span>
+          </div>
+          <div class="table-wrap">
+            <table class="custom-table">
+              <thead>
+                <tr>
+                  <th>{{ t.colClosureTitle }}</th>
+                  <th>{{ t.colClosureDates }}</th>
+                  <th>{{ t.colClosureRooms }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="c in closures" :key="c.closureId">
+                  <td style="font-weight:700;">{{ c.title }}</td>
+                  <td>{{ c.startDate }} - {{ c.endDate }}</td>
+                  <td>{{ c.affectedRoomIds }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <review-modal
+        v-if="showReviewModal && reviewData"
+        :t="t"
+        :review-data="reviewData"
+        :review-stage="reviewStage"
+        :read-only="isReadOnly"
+        :show="showReviewModal"
+        @close="showReviewModal = false"
+        @submit="submitDecision"
+      ></review-modal>
+
+    </div>
+  `
+};
+
+// ==========================================
+// 4. Main Vue 3 App Initialization
+// ==========================================
+const { createApp } = Vue;
+
+const app = createApp({
+  data() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const getParam = (key) => urlParams.get(key) || (window.SERVER_PARAMS && window.SERVER_PARAMS[key]);
+    const hasTokenOrReview = getParam('token') || getParam('action') || window.location.hash === '#dashboard';
+
+    return {
+      currentTab: hasTokenOrReview ? 'dashboard' : 'request',
+      currentLang: localStorage.getItem('app_lang') || 'th',
+      userEmail: window.PRELOADED_USER_EMAIL || '',
+      userRole: 'Applicant',
+      loading: false,
+      loadingTimer: null,
+      isLongLoading: false
+    };
+  },
+  computed: {
+    t() { return i18n[this.currentLang] || i18n.th; },
+    currentYear() { return new Date().getFullYear(); }
+  },
+  async mounted() {
+    if (!this.userEmail) {
+      try {
+        const email = await runGAS('getCurrentUserEmail');
+        if (email) {
+          this.userEmail = email;
+          try {
+            const role = await runGAS('determineSubmitterRole', email);
+            if (role) this.userRole = role;
+          } catch (roleError) {
+            console.warn('Determine role failed:', roleError);
+          }
+        }
+      } catch (e) {
+        console.warn('User fetch:', e);
+      }
+    }
+  },
+  methods: {
+    switchLang(lang) {
+      this.currentLang = lang;
+      localStorage.setItem('app_lang', lang);
+    },
+    setLoading(val) {
+      this.loading = !!val;
+      if (this.loading) {
+        this.isLongLoading = false;
+        if (this.loadingTimer) clearTimeout(this.loadingTimer);
+        this.loadingTimer = setTimeout(() => {
+          if (this.loading) this.isLongLoading = true;
+        }, 4000);
+      } else {
+        if (this.loadingTimer) clearTimeout(this.loadingTimer);
+        this.isLongLoading = false;
+      }
+    }
+  }
+});
+
+app.component('review-modal', ReviewModal);
+app.component('status-badge', StatusBadge);
+app.component('room-card', RoomCard);
+app.component('modal-confirm', ModalConfirm);
+app.component('timeline-step', TimelineStep);
+app.component('loading-spinner', LoadingSpinner);
+app.component('signature-pad', SignaturePad);
+app.component('request-view', RequestView);
+app.component('dashboard-view', DashboardView);
+
+app.mount('#app');
+</script>

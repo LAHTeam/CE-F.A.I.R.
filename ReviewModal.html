@@ -1,0 +1,139 @@
+<script>
+// ReviewModal – Vue 3 component (Google Apps Script compatible, no ES modules)
+// Included via <?!= include('ReviewModal'); ?> in Index.html BEFORE JavaScript.html
+const ReviewModal = {
+  props: {
+    t:           { type: Object,  required: true },
+    reviewData:  { type: Object,  required: true },
+    reviewStage: { type: Number,  required: true },
+    readOnly:    { type: Boolean, default: false }
+  },
+  data() {
+    return {
+      adminStartDate:     '',
+      adminBiometricDate: '',
+      reviewNote:         '',
+      showRejectConfirm:  false
+    };
+  },
+  created() {
+    // Reusable components ถูก define ใน JavaScript.html ซึ่งโหลดหลังไฟล์นี้
+    // จึง register แบบ dynamic ตอน component ถูกสร้างจริง
+    this.$options.components = { StatusBadge, TimelineStep, ModalConfirm };
+  },
+  computed: {
+    stageList() {
+      if (Array.isArray(this.reviewData.stages) && this.reviewData.stages.length) return this.reviewData.stages;
+      return [
+        { number: 1, title: 'อาจารย์ที่ปรึกษา (Advisor)', status: 'Pending' },
+        { number: 2, title: 'เจ้าหน้าที่ประจำแผนก (Division Staff)', status: 'Pending' },
+        { number: 3, title: 'หัวหน้าห้องปฏิบัติการ (Lab Head)', status: 'Pending' },
+        { number: 4, title: 'หัวหน้าตึก/ผู้ดูแลระบบ (Building Admin)', status: 'Pending' }
+      ];
+    }
+  },
+  methods: {
+    close() {
+      this.$emit('close');
+    },
+    requestReject() {
+      if (!this.reviewNote) {
+        Swal.fire(this.t.errorTitle, 'กรุณาระบุเหตุผลในการปฏิเสธ', 'warning');
+        return;
+      }
+      this.showRejectConfirm = true;
+    },
+    submit(decision) {
+      this.showRejectConfirm = false;
+      const extra = {};
+      if (this.reviewStage === 4 && decision === 'Approve') {
+        if (this.adminStartDate)     extra.startDate               = this.adminStartDate;
+        if (this.adminBiometricDate) extra.biometricAppointmentDate = this.adminBiometricDate;
+      }
+      this.$emit('submit', {
+        decision,
+        note:      this.reviewNote,
+        extra,
+        token:     this.reviewData.requestToken,
+        requestId: this.reviewData.requestId,
+        stage:     this.reviewStage
+      });
+    }
+  },
+  template: `
+    <div class="modal-overlay" @click.self="close">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 v-if="readOnly">รายละเอียดและสถานะคำขอ</h3>
+          <h3 v-else>{{ t.reviewTitle }} (Stage {{ reviewStage }})</h3>
+          <button @click="close" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body" style="font-size:13px;line-height:1.7;">
+          <div style="background:#f8fafc;padding:12px;border-radius:6px;border:1px solid #e2e8f0;margin-bottom:12px;">
+            <div v-if="reviewData.photoUrl" style="text-align:center;margin-bottom:8px;">
+              <img :src="reviewData.photoUrl" alt="Applicant Photo" loading="lazy"
+                   style="width:80px;height:100px;object-fit:cover;border-radius:6px;border:2px solid #661003;" />
+            </div>
+            <p><b>เลขที่คำขอ:</b> {{ reviewData.requestId }}</p>
+            <p><b>ผู้ขอ:</b> {{ reviewData.applicantName }} ({{ reviewData.applicantEmail }})</p>
+            <p><b>ภาค/สาขา:</b> {{ reviewData.department }} | <b>โทร:</b> {{ reviewData.phone }}</p>
+            <p><b>ห้องที่ขอ:</b> {{ reviewData.roomName }} ({{ reviewData.roomId }})</p>
+            <p><b>ช่วงเวลาที่ขอ:</b> {{ reviewData.startDate }} ถึง {{ reviewData.endDate }} ({{ reviewData.allowedTimeStart }} - {{ reviewData.allowedTimeEnd }})</p>
+            <p><b>วัน-เวลาขอรับการบันทึก Biometric:</b> {{ reviewData.biometricAppointmentDate }}</p>
+            <p><b>วัตถุประสงค์:</b> {{ reviewData.purpose }}</p>
+            <p><b>ชื่อและเบอร์โทร. ผู้ติดต่อ กรณีฉุกเฉิน:</b> {{ reviewData.emergencyContact }}</p>
+            <p v-if="reviewData.accessCode"><b>Access Code:</b> <span style="font-size:16px;font-weight:bold;color:#183666;">{{ reviewData.accessCode }}</span></p>
+            <p><b>สถานะปัจจุบัน:</b> <status-badge :status="reviewData.overallStatus"></status-badge></p>
+          </div>
+
+          <!-- Approval Timeline Stage 1-4 -->
+          <div class="box-card" style="margin-bottom:12px;">
+            <div class="box-card-header" style="padding:10px 12px;"><span>เส้นทางการอนุมัติ</span></div>
+            <div style="padding:12px;">
+              <timeline-step v-for="s in stageList" :key="s.number"
+                             :number="s.number" :title="s.title"
+                             :status="s.status || 'Pending'"
+                             :note="(s.date ? s.date : '') + (s.note ? ' · ' + s.note : '')">
+              </timeline-step>
+            </div>
+          </div>
+
+          <!-- Admin Stage 4: ปรับค่าวันที่ -->
+          <div v-if="reviewStage === 4 && !readOnly" style="background:#eff6ff;padding:12px;border-radius:6px;border:1px solid #bfdbfe;margin-bottom:12px;">
+            <div class="form-field" style="margin-bottom:8px;">
+               <label class="field-label" style="color:#1e40af;font-weight:700;">{{ t.adminAdjustStartDate }}</label>
+              <input type="date" v-model="adminStartDate" class="field-input" />
+            </div>
+            <div class="form-field">
+               <label class="field-label" style="color:#1e40af;font-weight:700;">{{ t.adminAdjustBiometric }}</label>
+              <input type="datetime-local" v-model="adminBiometricDate" class="field-input" />
+            </div>
+          </div>
+
+          <div v-if="!readOnly" class="form-field">
+            <label class="field-label">{{ t.noteLabel }}</label>
+            <textarea v-model="reviewNote" rows="2" class="field-input"
+                      placeholder="ระบุเหตุผลหรือข้อแนะนำเพิ่มเติม..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer" style="display:flex;gap:10px;justify-content:flex-end;">
+          <template v-if="readOnly">
+            <button @click="close" class="ui-btn ui-btn-outline" style="min-width: 100px;">ปิดหน้าต่าง</button>
+          </template>
+          <template v-else>
+            <button @click="requestReject()" class="ui-btn" style="background:#dc2626;color:#fff;">{{ t.btnReject }}</button>
+            <button @click="submit('Approve')" class="ui-btn ui-btn-primary">{{ t.btnApprove }}</button>
+          </template>
+        </div>
+
+        <modal-confirm :show="showRejectConfirm"
+                       title="ยืนยันการปฏิเสธคำขอ"
+                       message="การปฏิเสธจะทำให้คำขอนี้สิ้นสุดทันที ต้องการดำเนินการต่อหรือไม่?"
+                       confirm-text="ยืนยันปฏิเสธ" cancel-text="ยกเลิก"
+                       @confirm="submit('Reject')" @cancel="showRejectConfirm = false">
+        </modal-confirm>
+      </div>
+    </div>
+  `
+};
+</script>

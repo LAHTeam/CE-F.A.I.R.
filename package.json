@@ -1,0 +1,9 @@
+{
+  "name": "lah-team-room-access",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Lab Access Request System (Google Apps Script + Vue)",
+  "scripts": {
+    "validate": "node validate.js"
+  }
+}

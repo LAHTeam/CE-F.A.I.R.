@@ -1,0 +1,22 @@
+# Google Apps Script local ignore rules
+.claspignore
+
+# Secrets and local environment files
+.env
+.env.*
+*.secret
+*.key
+
+# Editors and operating-system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Generated and temporary files
+node_modules/
+dist/
+build/
+coverage/
+*.log
+*.tmp
