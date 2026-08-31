@@ -5,46 +5,171 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>คู่มือคัดลอกระบบ CE F.A.I.R. ไปยังอาคาร/ห้องปฏิบัติการอื่น (Deployment Guide)</title>
 <style>
-:root{--primary:#661003;--navy:#183666;--bg:#f6f7fb;--ok:#15884b;--warn:#b45309;}
+:root{
+  --primary:#661003;--primary-2:#8c1a05;--navy:#183666;--navy-2:#2756a8;
+  --bg:#f6f7fb;--card:#ffffff;--line:#e2e8f0;--line-2:#eef2f6;
+  --text:#1f2937;--muted:#64748b;--soft:#475569;
+  --ok:#15884b;--ok-bg:#f0fdf4;
+  --warn:#b45309;--warn-bg:#fffbeb;
+  --danger:#b91c1c;--danger-bg:#fef2f2;
+  --info:#1d4ed8;--info-bg:#eff6ff;
+  --code-bg:#0f1b33;--code-fg:#e6edf7;
+}
 *{box-sizing:border-box}
-body{font-family:'Segoe UI','Sarabun',sans-serif;margin:0;background:var(--bg);color:#1f2937;line-height:1.7}
-header{background:linear-gradient(135deg,var(--primary),var(--navy));color:#fff;padding:40px 24px}
-header h1{margin:0 0 8px;font-size:1.6rem}
-header p{margin:0;opacity:.9}
-main{max-width:960px;margin:0 auto;padding:24px}
-.toc{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px 22px;margin-bottom:24px}
-.toc h2{margin:0 0 8px;font-size:1.1rem;color:var(--navy)}
-.toc ol{margin:0;padding-left:24px;columns:2}
-.toc a{color:var(--navy);text-decoration:none}
-.toc a:hover{text-decoration:underline}
-.step{background:#fff;border:1px solid #e2e8f0;border-radius:12px;margin:16px 0;box-shadow:0 1px 3px rgba(0,0,0,.05);overflow:hidden}
-.step-h{display:flex;gap:14px;align-items:center;padding:16px 20px;border-bottom:1px solid #eef2f6;background:#fdfefe}
-.num{flex:0 0 40px;height:40px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700}
-.step-h h2{margin:0;font-size:1.15rem;color:var(--navy)}
-.step-h small{color:#64748b}
-.step-b{padding:12px 22px 20px}
-.step-b h3{color:var(--primary);font-size:1rem;margin:16px 0 6px}
+html{scroll-behavior:smooth}
+body{font-family:'Sarabun','Segoe UI',system-ui,sans-serif;margin:0;background:var(--bg);color:var(--text);line-height:1.7;font-size:15px}
+a{color:var(--navy-2)}
+
+header{position:relative;background:
+  radial-gradient(1200px 400px at 10% 0%,rgba(255,255,255,.18),transparent 60%),
+  radial-gradient(900px 400px at 100% 100%,rgba(255,255,255,.12),transparent 60%),
+  linear-gradient(135deg,var(--primary) 0%,var(--primary-2) 45%,var(--navy) 100%);
+  color:#fff;padding:56px 24px 80px}
+header .wrap{max-width:1000px;margin:0 auto}
+header .badge{display:inline-block;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);padding:4px 12px;border-radius:999px;font-size:.8rem;letter-spacing:.5px;margin-bottom:14px}
+header h1{margin:0 0 10px;font-size:1.9rem;line-height:1.3;font-weight:700}
+header p{margin:0;opacity:.95;max-width:780px;font-size:1.02rem}
+header .meta{margin-top:18px;display:flex;flex-wrap:wrap;gap:8px}
+header .meta span{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);padding:4px 10px;border-radius:6px;font-size:.82rem}
+
+.progress{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:10px 24px}
+.progress .wrap{max-width:1000px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.progress .bar{flex:1;height:8px;background:#e5e7eb;border-radius:999px;overflow:hidden}
+.progress .fill{height:100%;width:0%;background:linear-gradient(90deg,var(--primary),var(--navy-2));transition:width .3s ease}
+.progress label{font-size:.85rem;color:var(--soft);white-space:nowrap}
+.progress label b{color:var(--primary)}
+
+main{max-width:1000px;margin:-50px auto 0;padding:0 24px 40px;position:relative}
+
+.intro{background:linear-gradient(135deg,#fff,#fef3f0);border:1px solid #f3d8cf;border-radius:14px;padding:20px 24px;margin-bottom:24px;box-shadow:0 6px 16px rgba(102,16,3,.06)}
+.intro h2{margin:0 0 6px;font-size:1.15rem;color:var(--primary);display:flex;align-items:center;gap:8px}
+.intro p{margin:6px 0;color:var(--soft);font-size:.95rem}
+.intro .pillrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.intro .pill{background:#fff;border:1px solid var(--line);padding:5px 10px;border-radius:999px;font-size:.82rem;color:var(--soft)}
+.intro .pill b{color:var(--primary)}
+
+.toc{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 24px;margin-bottom:28px;box-shadow:0 4px 10px rgba(0,0,0,.04)}
+.toc h2{margin:0 0 12px;font-size:1.1rem;color:var(--navy);display:flex;align-items:center;gap:8px}
+.toc ol{margin:0;padding-left:24px;columns:2;column-gap:32px}
+.toc li{margin:4px 0;break-inside:avoid}
+.toc a{color:var(--navy);text-decoration:none;font-size:.92rem}
+.toc a:hover{color:var(--primary);text-decoration:underline}
+
+.step{background:var(--card);border:1px solid var(--line);border-radius:14px;margin:18px 0;box-shadow:0 2px 6px rgba(0,0,0,.04);overflow:hidden;transition:box-shadow .2s}
+.step:hover{box-shadow:0 6px 16px rgba(0,0,0,.07)}
+.step-h{display:flex;gap:14px;align-items:center;padding:16px 22px;border-bottom:1px solid var(--line-2);background:linear-gradient(180deg,#fdfefe,#fafbfc)}
+.num{flex:0 0 44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-2));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.05rem;box-shadow:0 4px 8px rgba(102,16,3,.25)}
+.step-h h2{margin:0;font-size:1.1rem;color:var(--navy);font-weight:600}
+.step-h small{color:var(--muted);font-size:.82rem}
+.step-h small .time{background:#eef2ff;color:#3730a3;padding:2px 8px;border-radius:10px;margin-left:6px}
+.step-b{padding:14px 24px 22px}
+.step-b h3{color:var(--primary);font-size:1rem;margin:18px 0 6px;padding-bottom:4px;border-bottom:1px dashed var(--line)}
+.step-b h3:first-child{margin-top:6px}
 .step-b ul,.step-b ol{margin:6px 0;padding-left:24px}
-.step-b li{margin:4px 0}
+.step-b li{margin:5px 0}
+.step-b > p{margin:8px 0;color:var(--soft)}
+.step-b > p{margin:8px 0;color:var(--soft)}
+
+.substep{display:flex;gap:12px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;margin:8px 0;background:#fafbff}
+.substep .tag{flex:0 0 26px;height:26px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.78rem}
+.substep .what{flex:1}
+.substep .what b{display:block;color:var(--navy);margin-bottom:2px;font-size:.95rem}
+.substep .what span{color:var(--muted);font-size:.85rem}
+
+.mock{border:1px solid var(--line);border-radius:10px;margin:10px 0;overflow:hidden;background:#fff}
+.mock .bar{background:#e5e7eb;padding:6px 10px;display:flex;gap:6px;align-items:center;font-size:.78rem;color:var(--muted)}
+.mock .bar .dot{width:10px;height:10px;border-radius:50%;background:#cbd5e1}
+.mock .bar .dot.r{background:#ef4444}.mock .bar .dot.y{background:#eab308}.mock .bar .dot.g{background:#22c55e}
+.mock .bar .title{margin-left:8px;font-weight:600;color:#334155}
+.mock .body{padding:12px 16px;font-family:'Consolas',monospace;font-size:.85rem;color:#1f2937;background:#fff;line-height:1.6}
+.mock .body .k{color:#7c3aed;font-weight:600}
+.mock .body .v{color:#0f766e}
+.mock .body .c{color:#64748b}
+.mock .body .btn{display:inline-block;background:#4338ca;color:#fff;padding:3px 10px;border-radius:4px;font-size:.8rem;margin:2px 2px}
+
+.newbie{background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #f59e0b;color:#92400e;padding:4px 10px;border-radius:6px;font-size:.78rem;font-weight:600;display:inline-block;margin-bottom:6px}
+
+.checklist{list-style:none;padding:0;margin:10px 0}
+.checklist li{padding:8px 12px;border:1px dashed var(--line);border-radius:6px;margin:6px 0;background:#fafbff;cursor:pointer;user-select:none;display:flex;align-items:center;gap:10px;transition:all .15s}
+.checklist li::before{content:'☐';color:var(--muted);font-size:1.1rem}
+.checklist li.done{background:#f0fdf4;border-color:#86efac;border-style:solid}
+.checklist li.done::before{content:'☑';color:var(--ok)}
+.checklist li.done span{text-decoration:line-through;color:var(--muted)}
 code{background:#f1f5f9;padding:2px 6px;border-radius:5px;font-family:Consolas,monospace;font-size:.92em}
 pre{background:#0f1b33;color:#e6edf7;padding:14px;border-radius:8px;overflow:auto;font-family:Consolas,monospace;font-size:.85rem}
-pre code{background:none;color:inherit;padding:0}
-.note{border-left:4px solid var(--warn);background:#fffbeb;padding:10px 14px;border-radius:6px;margin:12px 0}
-.ok{border-left:4px solid var(--ok);background:#f0fdf4;padding:10px 14px;border-radius:6px;margin:12px 0}
-.danger{border-left:4px solid #b91c1c;background:#fef2f2;padding:10px 14px;border-radius:6px;margin:12px 0}
-table{border-collapse:collapse;width:100%;margin:10px 0}
-th,td{border:1px solid #e2e8f0;padding:8px 10px;text-align:left;font-size:.9rem}
-th{background:#f8fafc}
-footer{padding:24px 20px;color:#64748b;font-size:.85rem;text-align:center}
-@media(max-width:700px){.toc ol{columns:1}.num{flex:0 0 32px;height:32px;font-size:.9rem}.step-h h2{font-size:1rem}}
+pre code{background:none;color:inherit;padding:0;font-size:inherit}
+
+.note,.ok,.danger,.tip{border-left:4px solid;padding:12px 16px;border-radius:0 8px 8px 0;margin:14px 0;font-size:.92rem}
+.note strong,.ok strong,.danger strong,.tip strong{display:block;margin-bottom:3px}
+.note{background:var(--info-bg);border-color:var(--info);color:#1e40af}
+.note strong::before{content:"ℹ️ ";font-size:.95rem}
+.ok{background:var(--ok-bg);border-color:var(--ok);color:#065f46}
+.ok strong::before{content:"✅ ";font-size:.95rem}
+.danger{background:var(--danger-bg);border-color:var(--danger);color:#7f1d1d}
+.danger strong::before{content:"⛔ ";font-size:.95rem}
+.tip{background:var(--warn-bg);border-color:var(--warn);color:#7c2d12}
+.tip strong::before{content:"💡 ";font-size:.95rem}
+
+table{border-collapse:collapse;width:100%;margin:12px 0;font-size:.9rem;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+th,td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:left}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:#f8fafc}
+th{background:#f1f5f9;color:var(--navy);font-weight:600;font-size:.85rem;text-transform:uppercase;letter-spacing:.3px}
+td code{font-size:.85rem}
+
+footer{padding:30px 20px;color:var(--muted);font-size:.85rem;text-align:center;background:#fff;border-top:1px solid var(--line);margin-top:40px}
+footer a{color:var(--navy-2);text-decoration:none}
+
+@media(max-width:760px){
+  body{font-size:14px}
+  header{padding:36px 20px 70px}
+  header h1{font-size:1.4rem}
+  .toc ol{columns:1}
+  .step-h h2{font-size:1rem}
+  .num{flex:0 0 38px;height:38px;font-size:.95rem}
+  .step-b{padding:12px 18px 18px}
+  .substep{flex-direction:column;gap:6px}
+  .progress label{display:none}
+}
 </style>
 </head>
 <body>
 <header>
-<h1>🚀 คู่มือคัดลอกระบบ CE F.A.I.R. ไปยังอาคาร/ห้องปฏิบัติการอื่น (Deployment Guide)</h1>
-<p>แบบจนหลวีซับบ (step-by-step) สำหรับผู้ดูแลที่ต้องการนำระบบแม่แบบไปติดตั้งที่อาคาร/สาขาใหม่ด้วยตนเอง</p>
+  <div class="wrap">
+    <span class="badge">📘 Deployment Guide · v1.1</span>
+    <h1>🚀 คู่มือคัดลอกระบบ CE F.A.I.R. ไปยังอาคาร/ห้องปฏิบัติการอื่น</h1>
+    <p>แบบจับมือทำทีละขั้นตอน (step-by-step) สำหรับผู้ดูแลที่ต้องการนำระบบแม่แบบไปติดตั้งที่อาคาร/สาขาใหม่ด้วยตนเอง — แม้ไม่เคยใช้ Apps Script มาก่อนก็ทำตามได้</p>
+    <div class="meta">
+      <span>🕒 รวม ~1.5–2 ชม.</span>
+      <span>📑 16 ขั้นตอน</span>
+      <span>👤 ผู้ดูแลระบบ/IT</span>
+      <span>🌐 Apps Script + Google Sheet</span>
+    </div>
+  </div>
 </header>
+
+<div class="progress">
+  <div class="wrap">
+    <label>ความคืบหน้า: <b id="pct">0%</b></label>
+    <div class="bar"><div class="fill" id="fill"></div></div>
+  </div>
+</div>
+
 <main>
+<div class="intro">
+  <h2>👋 สำหรับผู้ที่ไม่เคยใช้ Apps Script มาก่อน</h2>
+  <p><b>Apps Script</b> คือเครื่องมือฟรีของ Google ที่ฝังอยู่ใน Google Sheet/Docs/Slide — ให้คุณเขียนโค้ด JavaScript รันฝั่งเซิร์ฟเวอร์ของ Google ได้โดยไม่ต้องตั้งเซิร์ฟเวอร์เอง ระบบ CE F.A.I.R. ใช้ Apps Script ทำหน้าที่ "backend" ทั้งหมด (ส่งอีเมล สร้างปฏิทิน อัปโหลดไฟล์ ฯลฯ)</p>
+  <p><b>สิ่งที่คุณต้องรู้พื้นฐานมีแค่นี้:</b></p>
+  <div class="pillrow">
+    <span class="pill">📄 <b>Google Sheet</b> = ฐานข้อมูลของเรา</span>
+    <span class="pill">⚙️ <b>Apps Script</b> = สมองกล/ตรรกะ</span>
+    <span class="pill">🌐 <b>Web App</b> = หน้าเว็บที่ผู้ใช้เปิด</span>
+    <span class="pill">🔑 <b>OAuth Consent</b> = ขออนุญาตเข้าถึงบริการ Google</span>
+    <span class="pill">⏰ <b>Trigger</b> = ตั้งเวลาให้รันอัตโนมัติ</span>
+  </div>
+  <p style="margin-top:12px">📖 คู่มือนี้จะพาไปทีละคลิก — ไม่ต้องเขียนโค้ดเอง แค่ <b>คัดลอกไฟล์</b>, <b>กดปุ่ม Run</b>, <b>ตั้งค่า</b> ตามลำดับ หากติดขัดข้อไหน ดู <a href="#s16">Troubleshooting (ข้อ 16)</a> ท้ายเอกสาร</p>
+</div>
+
 <div class="toc">
 <h2>🧭 สารบัญ</h2>
 <ol>
@@ -157,15 +282,63 @@ footer{padding:24px 20px;color:#64748b;font-size:.85rem;text-align:center}
   </div>
 </div>
 <div class="step" id="s7">
-  <div class="step-h"><div class="num">7</div><div><h2>ใส่ข้อมูลพื้นฐาน: Rooms, Advisor, DivisionStaff, LabHead, Admin</h2><small>~15 นาที</small></div></div>
+  <div class="step-h"><div class="num">7</div><div><h2>ใส่ข้อมูลพื้นฐาน: Rooms, Advisor, DivisionStaff, LabHead, Admin</h2><small>~15 นาที · <span class="time">5 ชีต</span></small></div></div>
   <div class="step-b">
-    <h3>Rooms</h3>
-    <ul><li>ใส่ RoomID, ชื่อ, อาคาร, ชั้น, ความจุ, facilities, อีเมล Lab Head, image URL, status</li></ul>
-    <h3>Advisor</h3>
-    <ul><li>อีเมลอาจารย์ที่ปรึกษา (ขั้น 1)</li></ul>
-    <h3>DivisionStaff / LabHead / Admin</h3>
-    <ul><li>อีเมลผู้อนุมัติแต่ละขั้น และสิทธิ์จาก Dashboard</li></ul>
-    <div class="note">💡 คัดลอกจาก Sheet ตัวอย่างของแม่แบบเดิมได้เลย แล้วปรับรายชื่อตามหน่วยงานใหม่</div>
+    <span class="newbie">🟡 สำหรับมือใหม่</span>
+    <p>หลังจากข้อ 6 ระบบจะสร้างชีตว่างๆ ไว้ 10 แท็บ แต่ยังไม่มีข้อมูล — ขั้นตอนนี้คือการ <b>เพิ่มข้อมูลอ้างอิง</b> (master data) ที่ระบบจะใช้ตรวจสิทธิ์/ส่งอีเมล/แสดง dropdown</p>
+
+    <h3>📍 ขั้นที่ 1: กลับไปที่ Google Sheet ของอาคารใหม่</h3>
+    <p>เปิด Sheet <code>CE-FAIR-XXX</code> ที่สร้างไว้ในข้อ 2 — จะเห็นชีต 10 แท็บเรียงกัน</p>
+    <div class="mock">
+      <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">CE-FAIR-SCI-B02 — Google Sheets</span></div>
+      <div class="body">
+<span class="c">แท็บด้านล่าง:</span>
+<span class="v">Requests</span> | <span class="v">Users</span> | <span class="v">Rooms</span> | <span class="v">Settings</span> | <span class="v">RoomClosures</span> |
+<span class="k">Advisor</span> | <span class="k">DivisionStaff</span> | <span class="k">LabHead</span> | <span class="k">Admin</span> | <span class="k">Logs</span>
+      </div>
+    </div>
+
+    <h3>📍 ขั้นที่ 2: ใส่ข้อมูลชีต <code>Rooms</code></h3>
+    <p>คลิกแท็บ <code>Rooms</code> → เริ่มจาก <b>แถว 2</b> (แถว 1 คือหัวตาราง)</p>
+    <div class="substep"><div class="tag">1</div><div class="what"><b>RoomID</b><span>รหัสห้องภายใน เช่น <code>B02-LAB-301</code> (ใช้เป็น key อ้างอิง — ตั้งให้สั้นและไม่ซ้ำ)</span></div></div>
+    <div class="substep"><div class="tag">2</div><div class="what"><b>RoomName</b><span>ชื่อห้องเต็ม เช่น "ปฏิบัติการเทคนิคโยธา 1"</span></div></div>
+    <div class="substep"><div class="tag">3</div><div class="what"><b>Building / Floor</b><span>อาคารและชั้น ใช้แสดงผลในหน้าเว็บ</span></div></div>
+    <div class="substep"><div class="tag">4</div><div class="what"><b>Capacity</b><span>ความจุ (คน) ใส่ตัวเลข เช่น <code>30</code></span></div></div>
+    <div class="substep"><div class="tag">5</div><div class="what"><b>Facilities</b><span>อุปกรณ์/สิ่งอำนวยความสะดวก เช่น "โปรเจคเตอร์, เครื่องทดสอบ"</span></div></div>
+    <div class="substep"><div class="tag">6</div><div class="what"><b>LabHeadEmail</b><span>อีเมลหัวหน้าห้อง (ต้องตรงกับชีต LabHead)</span></div></div>
+    <div class="substep"><div class="tag">7</div><div class="what"><b>ImageURL / Status</b><span>ลิงก์รูปภาพห้อง (optional) / สถานะ <code>Active</code> หรือ <code>Inactive</code></span></div></div>
+    <div class="tip"><strong>เคล็ดลับ</strong>คัดลอกข้อมูลจาก Sheet ตัวอย่างของแม่แบบเดิมได้เลย แล้ว <b>แก้เฉพาะชื่อ/อาคาร/ห้อง</b> ให้ตรงกับอาคารใหม่</div>
+
+    <h3>📍 ขั้นที่ 3: ใส่ข้อมูลชีต <code>Advisor</code></h3>
+    <p>อาจารย์ที่ปรึกษาที่จะอนุมัติขั้นที่ 1 — ใส่ 1 คนต่อแถว</p>
+    <table>
+      <tr><th>Email</th><th>ชื่อ-สกุล</th><th>สาขา</th></tr>
+      <tr><td><code>advisor1@kku.ac.th</code></td><td>ผศ.ดร. สมชาย ใจดี</td><td>วิศวกรรมโยธา</td></tr>
+      <tr><td><code>advisor2@kku.ac.th</code></td><td>รศ.ดร. สมหญิง เก่งกล้า</td><td>วิศวกรรมโยธา</td></tr>
+    </table>
+    <div class="note"><strong>ทำไมต้องใส่ที่นี่?</strong>เพราะระบบจะใช้อีเมลนี้ตรวจว่า "ผู้ที่กดลิงก์อนุมัติ คืออาจารย์ที่ปรึกษาจริงไหม" — ถ้าอีเมลไม่ตรง ระบบจะปฏิเสธ</div>
+
+    <h3>📍 ขั้นที่ 4: ใส่ข้อมูลชีต <code>DivisionStaff</code> / <code>LabHead</code> / <code>Admin</code></h3>
+    <p>ทำคล้ายกัน — แต่ละชีตเก็บอีเมลผู้มีสิทธิ์อนุมัติในแต่ละขั้น:</p>
+    <table>
+      <tr><th>ชีต</th><th>ความหมาย</th><th>ตัวอย่าง Email</th></tr>
+      <tr><td><code>DivisionStaff</code></td><td>เจ้าหน้าที่สาขา (อนุมัติขั้น 2)</td><td><code>staff-ce@kku.ac.th</code></td></tr>
+      <tr><td><code>LabHead</code></td><td>หัวหน้าห้องปฏิบัติการ (อนุมัติขั้น 3)</td><td><code>labhead-ce@kku.ac.th</code></td></tr>
+      <tr><td><code>Admin</code></td><td>ผู้ดูแลระบบ (อนุมัติขั้น 4 + จัดการทั้งหมด)</td><td><code>admin-ce@kku.ac.th</code></td></tr>
+    </table>
+    <div class="danger"><strong>ระวัง</strong>อย่าใส่อีเมลส่วนบุคคลที่ลาออกไปแล้ว — หากยังไม่แน่ใจ ใส่เฉพาะอีเมลกลุ่ม/ตำแหน่ง แล้วค่อยเพิ่มรายชื่อทีหลัง</div>
+
+    <h3>📍 ขั้นที่ 5: (ถ้ามี) ชีต <code>Users</code> สำหรับ sync จาก Google Workspace</h3>
+    <p>ปกติระบบจะดึงรายชื่อจาก Session ของผู้ใช้ตอน login — ชีตนี้ใช้เก็บ mapping เพิ่มเติม เช่น role เฉพาะ นักศึกษา/บุคลากร</p>
+
+    <div class="ok"><strong>Checkpoint</strong>เปิด Sheet แต่ละแท็บแล้วเห็นข้อมูลครบ — ลองกรองคอลัมน์ Email ดูว่าไม่มีช่องว่าง/ตัวสะกดผิด</div>
+
+    <ul class="checklist">
+      <li><span>ชีต Rooms มีข้อมูลห้องอย่างน้อย 1 แถว</span></li>
+      <li><span>ชีต Advisor มีอีเมลอาจารย์ครบ</span></li>
+      <li><span>ชีต DivisionStaff / LabHead / Admin มีอีเมลครบ 4 ขั้น</span></li>
+      <li><span>ตรวจสะกดอีเมลทุกช่อง (typo = หายงาน)</span></li>
+    </ul>
   </div>
 </div>
 
@@ -184,27 +357,132 @@ footer{padding:24px 20px;color:#64748b;font-size:.85rem;text-align:center}
 </div>
 
 <div class="step" id="s9">
-  <div class="step-h"><div class="num">9</div><div><h2>ปรับ Settings (อีเมล, prefix, retention)</h2><small>~5 นาที</small></div></div>
+  <div class="step-h"><div class="num">9</div><div><h2>ปรับ Settings (อีเมล, prefix, retention)</h2><small>~5 นาที · <span class="time">ชีต Settings</span></small></div></div>
   <div class="step-b">
+    <span class="newbie">🟡 สำหรับมือใหม่</span>
+    <p>ชีต <code>Settings</code> คือ <b>ศูนย์กลางค่าตั้งค่า</b> ของระบบ — แทนที่จะฝังในโค้ด เราเก็บไว้ใน Sheet เพื่อให้ผู้ดูแลปรับได้โดยไม่ต้องแก้โค้ด</p>
+
+    <h3>📍 ขั้นที่ 1: เปิดชีต <code>Settings</code></h3>
+    <p>กลับไปที่ Google Sheet → คลิกแท็บ <code>Settings</code> ด้านล่าง</p>
+
+    <div class="mock">
+      <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">CE-FAIR-SCI-B02 — Settings</span></div>
+      <div class="body">
+<span class="k">A</span>: Key          <span class="k">B</span>: Value             <span class="k">C</span>: คำอธิบาย
+<span class="v">ADMIN_EMAIL</span>          admin-ce@kku.ac.th       อีเมล Admin หลัก
+<span class="v">REQUEST_ID_PREFIX</span>     B02-                     prefix รหัสคำขอ
+<span class="v">DATA_RETENTION_MONTHS</span> 12                       เก็บข้อมูลกี่เดือน
+      </div>
+    </div>
+
+    <h3>📍 ขั้นที่ 2: ค่าที่ต้องตั้งใหม่ทุกครั้ง</h3>
+    <p>ตั้งค่าต่อไปนี้ให้ตรงกับอาคาร/หน่วยงานใหม่ — ที่เหลือใช้ค่า default จากแม่แบบได้</p>
+    <table>
+      <tr><th>Key</th><th>ตัวอย่าง Value</th><th>คำอธิบาย</th></tr>
+      <tr><td><code>ADMIN_EMAIL</code></td><td><code>admin-ce-b02@kku.ac.th</code></td><td>อีเมล Admin หลักที่จะรับแจ้งเตือนข้อผิดพลาด/คำขอที่ต้องตรวจ</td></tr>
+      <tr><td><code>HEAD_OF_CIVIL_ENG_EMAIL</code></td><td><code>head-ce-b02@kku.ac.th</code></td><td>หัวหน้าสาขา/อาคาร (ใช้ในอีเมลบางสถานการณ์)</td></tr>
+      <tr><td><code>REQUEST_ID_PREFIX</code></td><td><code>B02-</code></td><td>prefix รหัสคำขอ เช่น <code>B02-20251015-001</code> — ตั้งให้ไม่ซ้ำกับอาคารอื่น</td></tr>
+      <tr><td><code>DATA_RETENTION_MONTHS</code></td><td><code>12</code></td><td>เก็บข้อมูลคำขอ/รูปภาพกี่เดือนก่อนลบ (ค่าแนะนำ: 12 สำหรับงานทั่วไป, 24 สำหรับงานวิจัย)</td></tr>
+      <tr><td><code>TIMEZONE</code></td><td><code>Asia/Bangkok</code></td><td>เขตเวลา (ปกติไม่ต้องเปลี่ยน)</td></tr>
+      <tr><td><code>TOKEN_EXPIRY_DAYS</code></td><td><code>7</code></td><td>token อนุมัติหมดอายุกี่วัน</td></tr>
+      <tr><td><code>APPROVAL_REMINDER_DAYS</code></td><td><code>3</code></td><td>แจ้งเตือนผู้อนุมัติทุกกี่วันหากค้าง</td></tr>
+      <tr><td><code>PHOTO_MAX_SIZE_MB</code></td><td><code>5</code></td><td>ขนาดไฟล์รูปสูงสุด (MB) — backend จะปฏิเสธไฟล์เกิน</td></tr>
+    </table>
+
+    <div class="tip"><strong>เคล็ดลับ</strong>หากต้องการเปลี่ยน <code>DATA_RETENTION_MONTHS</code> ภายหลัง ระบบจะใช้ค่าใหม่ในการรันครั้งถัดไป (ทุกวัน 02:00) — ไม่กระทบข้อมูลเก่าทันที</div>
+
+    <h3>📍 ขั้นที่ 3: (ไม่บังคับ) ค่าที่ใช้บ่อย</h3>
     <ul>
-      <li><code>ADMIN_EMAIL</code> → อีเมล Admin ใหม่ของหน่วยงาน</li>
-      <li><code>HEAD_OF_CIVIL_ENG_EMAIL</code> → หัวหน้าสาขาใหม่</li>
-      <li><code>REQUEST_ID_PREFIX</code> → เช่น <code>B02-</code> กันรหัสข้ามอาคาร</li>
-      <li><code>DATA_RETENTION_MONTHS</code> → เช่น <code>12</code></li>
+      <li><code>SUPPORT_PHONE</code> — เบอร์โทรติดต่อเจ้าหน้าที่ แสดงในหน้าช่วยเหลือ</li>
+      <li><code>SUPPORT_EMAIL</code> — อีเมลสำหรับผู้ใช้ติดต่อสอบถาม</li>
+      <li><code>ANNOUNCEMENT_BANNER</code> — ข้อความประชาสัมพันธ์ (ถ้ามี) แสดงบนหน้าเว็บ</li>
+    </ul>
+
+    <div class="ok"><strong>Checkpoint</strong>เปิดชีต <code>Settings</code> แล้วเห็นแถวข้อมูลครบทุก key — ลองค้นหา <code>ADMIN_EMAIL</code> ด้วย Ctrl+F ยืนยันว่าตั้งค่าถูกต้อง</div>
+
+    <div class="danger"><strong>ระวัง</strong>อย่าลบแถวในชีต Settings โดยไม่ตั้งใจ — ถ้าลบ key ที่จำเป็น ระบบจะใช้ค่า default แทน ซึ่งอาจไม่ตรงกับอาคารใหม่</div>
+
+    <ul class="checklist">
+      <li><span>ตั้ง ADMIN_EMAIL ของอาคารใหม่</span></li>
+      <li><span>ตั้ง REQUEST_ID_PREFIX ที่ไม่ซ้ำกับอาคารอื่น</span></li>
+      <li><span>ตั้ง DATA_RETENTION_MONTHS ตามนโยบายองค์กร</span></li>
     </ul>
   </div>
 </div>
 
 <div class="step" id="s10">
-  <div class="step-h"><div class="num">10</div><div><h2>ติดตั้ง Trigger รายวัน</h2><small>~3 นาที</small></div></div>
+  <div class="step-h"><div class="num">10</div><div><h2>ติดตั้ง Trigger รายวัน</h2><small>~5 นาที · <span class="time">ฟังก์ชันใน Apps Script</span></small></div></div>
   <div class="step-b">
-    <p>รัน <code>setupDailyTriggers()</code> → ผล:</p>
-    <ul>
-      <li><code>updateExpiredRequests</code> — ทุกวัน 01:00</li>
-      <li><code>sendPendingApprovalReminders</code> — ทุกวัน 08:00</li>
-      <li><code>applyDataRetentionPolicy</code> — ทุกวัน 02:00</li>
+    <span class="newbie">🟡 สำหรับมือใหม่</span>
+    <p><b>Trigger</b> คือ "นาฬิกาปลุก" ที่บอกให้ Apps Script รันฟังก์ชันอัตโนมัติตามเวลาที่ตั้ง — ไม่ต้องเปิดเครื่องทิ้งไว้ Google จะรันให้เอง</p>
+
+    <h3>📍 ขั้นที่ 1: เปิด Apps Script Editor</h3>
+    <p>จาก Google Sheet → <b>Extensions → Apps Script</b> (เหมือนข้อ 3)</p>
+    <div class="mock">
+      <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">CE-FAIR-SCI-B02 — Apps Script</span></div>
+      <div class="body">
+<span class="c">// Editor จะเปิดแท็บใหม่ มีไฟล์:</span>
+<span class="v">📄 Code.gs</span>           <span class="c">← ไฟล์ที่คัดลอกมาจากข้อ 4</span>
+<span class="v">📄 Index.html</span>        <span class="c">← หน้าเว็บ</span>
+<span class="v">📄 JavaScript.html</span>
+<span class="v">📄 Stylesheet.html</span>
+<span class="v">📄 ReviewModal.html</span>
+      </div>
+    </div>
+
+    <h3>📍 ขั้นที่ 2: เลือกฟังก์ชัน <code>setupDailyTriggers</code></h3>
+    <ol>
+      <li>ในแถบด้านบนของ Editor จะมี <b>dropdown</b> ข้างปุ่ม ▶️ Run — ให้คลิกแล้วเลือก <code>setupDailyTriggers</code> (พิมพ์ค้นหาได้)</li>
+      <li>กดปุ่ม <b>▶️ Run</b></li>
+      <li>ครั้งแรก Google จะขอ <b>Authorize access</b> → กด <b>Review Permissions</b> → เลือกบัญชี → <b>Allow</b></li>
+    </ol>
+    <div class="mock">
+      <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">Apps Script Editor</span></div>
+      <div class="body">
+<span class="c">ฟังก์ชัน:</span>  [<span class="v">setupDailyTriggers</span> ▼]  <span class="btn">▶️ Run</span>
+
+<span class="c">↓ ครั้งแรกจะเห็น popup:</span>
+┌─────────────────────────────────────┐
+│ <span class="v">Authorization required</span>           │
+│ This project requires your permission │
+│ to access your data.                  │
+│ [<span class="btn">Review Permissions</span>]              │
+└─────────────────────────────────────┘
+      </div>
+    </div>
+
+    <div class="danger"><strong>ถ้าเจอหน้า "This app isn't verified"</strong>ไม่ต้องตกใจ — เพราะ Apps Script ที่เราเขียนเองยังไม่ผ่าน Google verification (ใช้เวลานาน) ให้กด <b>Advanced → Go to (project name) (unsafe)</b> แล้ว <b>Allow</b> ได้เลย ปลอดภัยเพราะเป็นโค้ดที่เราเขียน/คัดลอกเอง</div>
+
+    <h3>📍 ขั้นที่ 3: ตรวจผลลัพธ์</h3>
+    <p>หลังรันเสร็จ ดู <b>Execution log</b> ด้านล่าง — ถ้าสำเร็จจะเห็นข้อความ:</p>
+    <pre>{
+  "success": true,
+  "triggers": [
+    {"function": "updateExpiredRequests", "schedule": "ทุกวัน 01:00"},
+    {"function": "sendPendingApprovalReminders", "schedule": "ทุกวัน 08:00"},
+    {"function": "applyDataRetentionPolicy", "schedule": "ทุกวัน 02:00"}
+  ]
+}</pre>
+
+    <h3>📍 ขั้นที่ 4: ตรวจใน Triggers panel</h3>
+    <p>คลิกไอคอน <b>⏰ (Triggers)</b> ที่แถบซ้ายของ Editor → จะเห็นรายการ Trigger ที่ติดตั้ง:</p>
+    <table>
+      <tr><th>ฟังก์ชัน</th><th>เวลา</th><th>ทำหน้าที่</th></tr>
+      <tr><td><code>updateExpiredRequests</code></td><td>ทุกวัน 01:00</td><td>เปลี่ยนสถานะคำขอที่หมดเวลา → Expired</td></tr>
+      <tr><td><code>applyDataRetentionPolicy</code></td><td>ทุกวัน 02:00</td><td>ลบรูป/ข้อมูลเก่าเกิน retention</td></tr>
+      <tr><td><code>sendPendingApprovalReminders</code></td><td>ทุกวัน 08:00</td><td>ส่งอีเมลเตือนผู้อนุมัติที่ค้าง</td></tr>
+    </table>
+
+    <div class="tip"><strong>ถ้ารันแล้วไม่เห็น Trigger</strong>ให้ดูในแท็บ <b>Executions</b> (ไอคอน ⏱️) — ถ้าเห็น <code>Failed</code> ให้คลิกเข้าไปดู error แล้วแก้ตามนั้น ปัญหาที่พบบ่อย: สิทธิ์ OAuth ไม่ครบ (ดูข้อ 13) หรือโค้ดมี syntax error</div>
+
+    <div class="note"><strong>หมายเหตุ</strong>Trigger จะรันตาม <b>เขตเวลาของโปรเจกต์</b> (ตั้งใน appsscript.json — ปกติ <code>Asia/Bangkok</code>) หากต้องการเปลี่ยนเวลา ให้ลบ trigger เดิมใน Triggers panel แล้วรัน <code>setupDailyTriggers()</code> ใหม่หลังแก้โค้ด</div>
+
+    <ul class="checklist">
+      <li><span>เลือก setupDailyTriggers ใน dropdown</span></li>
+      <li><span>กด ▶️ Run + อนุญาตสิทธิ์</span></li>
+      <li><span>ดู Execution log → success: true</span></li>
+      <li><span>ตรวจ Triggers panel เห็น 3 รายการ</span></li>
     </ul>
-    <div class="ok">✅ Checkpoint: ฟังก์ชันตอบ <code>{success:true}</code></div>
   </div>
 </div>
 
@@ -285,5 +563,38 @@ npm run validate</pre>
 <div class="ok"><b>สรุป:</b> ทำครบข้อ 1–14 = อาคาร/ห้องใหม่พร้อมใช้งานแล้ว — เหลือ maintainers ดูแลประจำข้อ 15 และใช้ Troubleshooting ข้อ 16</div>
 </main>
 <footer>© CE F.A.I.R. — Deployment Guide v1.0 | เอกสารสำหรับผู้ดูแลระบบ | ไฟล์ HTML เดียวจบ</footer>
+<script>
+(function(){
+  // Progress bar — ติดตามว่าผู้อ่านเลื่อนผ่านกี่ % ของ step
+  var steps = document.querySelectorAll('.step');
+  var fill = document.getElementById('fill');
+  var pct = document.getElementById('pct');
+  function updateProgress(){
+    var scroll = window.scrollY + window.innerHeight * 0.6;
+    var last = 0;
+    steps.forEach(function(s, i){
+      if (s.offsetTop <= scroll) last = i + 1;
+    });
+    var p = Math.round(last / steps.length * 100);
+    fill.style.width = p + '%';
+    pct.textContent = p + '%';
+  }
+  window.addEventListener('scroll', updateProgress);
+  window.addEventListener('load', updateProgress);
+  updateProgress();
+
+  // Checklist — คลิกเพื่อติ๊ก/untick (เก็บสถานะใน localStorage)
+  document.querySelectorAll('.checklist').forEach(function(list, idx){
+    list.querySelectorAll('li').forEach(function(li, i){
+      var key = 'dg_step_' + idx + '_' + i;
+      if (localStorage.getItem(key) === '1') li.classList.add('done');
+      li.addEventListener('click', function(){
+        li.classList.toggle('done');
+        localStorage.setItem(key, li.classList.contains('done') ? '1' : '0');
+      });
+    });
+  });
+})();
+</script>
 </body>
 </html>
