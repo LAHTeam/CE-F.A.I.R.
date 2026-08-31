@@ -189,6 +189,7 @@ footer a{color:var(--navy-2);text-decoration:none}
 <li><a href="#s14">ข้อ 14 — Deploy Production + จด Deployment ID</a></li>
 <li><a href="#s15">ข้อ 15 — บำรุงรักษาประจำ: Backup, ตรวจสิทธิ์, ความปลอดภัย</a></li>
 <li><a href="#s16">ข้อ 16 — Troubleshooting ปัญหาที่พบบ่อย</a></li>
+<li><a href="#appendix">📊 ภาคผนวก: โครงสร้างทุกคอลัมน์ในทุกชีต</a></li>
 </ol>
 </div>
 
@@ -560,7 +561,167 @@ npm run validate</pre>
   </div>
 </div>
 
-<div class="ok"><b>สรุป:</b> ทำครบข้อ 1–14 = อาคาร/ห้องใหม่พร้อมใช้งานแล้ว — เหลือ maintainers ดูแลประจำข้อ 15 และใช้ Troubleshooting ข้อ 16</div>
+<div class="step" id="appendix">
+  <div class="step-h"><div class="num">📊</div><div><h2>ภาคผนวก: โครงสร้างทุกคอลัมน์ในทุกชีต</h2><small>รายละเอียดทั้งหมดจาก schema ใน <code>Code.gs</code></small></div></div>
+  <div class="step-b">
+    <span class="newbie">🟡 สำหรับมือใหม่</span>
+    <p>ตารางด้านล่างคือ <b>ทุกคอลัมน์</b>ที่ระบบสร้างให้อัตโนมัติเมื่อรัน <code>initDatabase()</code> คอลัมน์ที่เขียนว่า "ระบบเติม" หมายถึง <b>ไม่ต้องกรอก</b> ปล่อยให้ระบบจัดการเอง</p>
+    <div class="tip"><strong>สัญลักษณ์</strong>🟢 = ผู้ใช้/ระบบกรอก · 🟡 = ระบบเติมอัตโนมัติ · ⚪ = ไม่บังคับ · 🔴 = บังคับกรอก</div>
+
+    <h3>📋 ชีต 1: <code>Requests</code> — ตารางคำขอหลัก (61 คอลัมน์)</h3>
+    <p><b>ผู้ดูแลไม่ต้องกรอก</b> — ระบบจัดการให้ทั้งหมด</p>
+    <table>
+      <tr><th>#</th><th>Header</th><th>คำอธิบาย</th><th>ใครกรอก</th></tr>
+      <tr><td>1–2</td><td><code>RequestID</code>, <code>Timestamp</code></td><td>รหัสคำขอ เช่น <code>REQ-00001</code> / วันเวลา submit</td><td>🟡 ระบบ</td></tr>
+      <tr><td>3–9</td><td><code>ApplicantID</code>–<code>Phone</code></td><td>รหัสผู้ใช้, ชื่อ, อีเมล, ประเภท (<code>Student</code>/<code>Staff</code>/<code>External</code>), ภาควิชา, เบอร์โทร</td><td>🟢 ผู้ใช้</td></tr>
+      <tr><td>10–18</td><td><code>RoomID</code>–<code>EmergencyContact</code></td><td>รหัส/ชื่อห้อง, วัตถุประสงค์, StartDate/EndDate, AllowedTimeStart/End (เช่น 16:30-20:30), รายชื่อผู้ร่วมงาน (≥1 คน), ผู้ติดต่อฉุกเฉิน</td><td>🟢 ผู้ใช้</td></tr>
+      <tr><td>19–42</td><td>Stage1–Stage4 (6 คอลัมน์ต่อขั้น)</td><td>แต่ละขั้น: <code>ApproverEmail</code>, <code>Status</code> (Pending/Approved/Rejected/Skipped), <code>Date</code>, <code>Note</code>, <code>Token</code> (Secure Token), <code>ReminderSentAt</code></td><td>🟡 ระบบ (Note ใส่โดยผู้อนุมัติ)</td></tr>
+      <tr><td>43</td><td><code>BiometricAppointmentDate</code></td><td>วันเวลานัดสแกนลายนิ้วมือ/ใบหน้า</td><td>🟢 ผู้ใช้</td></tr>
+      <tr><td>44–46</td><td><code>BiometricStatus</code>, <code>CurrentStage</code>, <code>OverallStatus</code></td><td>สถานะชีวมิติ / ขั้นปัจจุบัน (1-4) / สถานะรวม (Pending/Approved/Rejected)</td><td>🟡 ระบบ</td></tr>
+      <tr><td>47–48</td><td><code>SignatureData</code>, <code>PhotoURL</code></td><td>Base64 PNG ลายเซ็น / URL รูป (สุ่มชื่อ, ≤5MB, JPEG/PNG/WebP)</td><td>🟢 ผู้ใช้</td></tr>
+      <tr><td>49</td><td><code>RequestToken</code></td><td>Token สำหรับผู้ขอเปิด Tracking Modal</td><td>🟡 ระบบ</td></tr>
+      <tr><td>50–61</td><td>Stage1–Stage4 <code>Token*</code> (12 คอลัมน์)</td><td>แต่ละขั้น: <code>TokenUsedAt</code>, <code>TokenFailedAttempts</code> (ล็อกเมื่อครบ 5), <code>TokenLastFailedAt</code> — <b>token security metadata</b></td><td>🟡 ระบบ</td></tr>
+    </table>
+
+    <h3>📋 ชีต 2: <code>Users</code> — ฐานข้อมูลผู้ใช้ (20 คอลัมน์)</h3>
+    <p><b>ผู้ดูแลไม่ต้องกรอก</b> — ระบบเพิ่มแถวอัตโนมัติเมื่อผู้ใช้ submit ครั้งแรก</p>
+    <table>
+      <tr><th>#</th><th>Header</th><th>คำอธิบาย</th></tr>
+      <tr><td>1</td><td><code>UserID</code></td><td>รหัสผู้ใช้ (auto)</td></tr>
+      <tr><td>2</td><td><code>FullName</code></td><td>ชื่อ-นามสกุล</td></tr>
+      <tr><td>3</td><td><code>Age</code></td><td>อายุ</td></tr>
+      <tr><td>4</td><td><code>PersonType</code></td><td><code>Student</code> / <code>Staff</code> / <code>External</code></td></tr>
+      <tr><td>5</td><td><code>StaffType</code></td><td><code>Academic</code> / <code>Support</code></td></tr>
+      <tr><td>6</td><td><code>StudentID</code></td><td>รหัสนักศึกษา</td></tr>
+      <tr><td>7</td><td><code>Phone</code></td><td>เบอร์โทร</td></tr>
+      <tr><td>8</td><td><code>Email</code></td><td>อีเมล</td></tr>
+      <tr><td>9</td><td><code>Department</code></td><td>ภาควิชา</td></tr>
+      <tr><td>10</td><td><code>Faculty</code></td><td>คณะ</td></tr>
+      <tr><td>11</td><td><code>Division</code></td><td>แผนก (1-7)</td></tr>
+      <tr><td>12</td><td><code>DegreeLevel</code></td><td><code>Bachelor</code> / <code>Master</code> / <code>Doctoral</code></td></tr>
+      <tr><td>13</td><td><code>ExternalOrg</code></td><td>หน่วยงานภายนอก (กรณี External)</td></tr>
+      <tr><td>14</td><td><code>ProjectTopic</code></td><td>หัวข้อวิจัย/โครงการ</td></tr>
+      <tr><td>15</td><td><code>Justification</code></td><td>ความจำเป็นในการเข้าใช้</td></tr>
+      <tr><td>16</td><td><code>AccessCode</code></td><td>รหัส 6 หลัก ใช้กับเครื่องสแกน</td></tr>
+      <tr><td>17</td><td><code>PhotoURL</code></td><td>ลิงก์รูปโปรไฟล์</td></tr>
+      <tr><td>18</td><td><code>Status</code></td><td><code>Active</code> / <code>Suspended</code> / <code>Expired</code></td></tr>
+      <tr><td>19</td><td><code>CreatedAt</code></td><td>วันที่สร้างบัญชี</td></tr>
+      <tr><td>20</td><td><code>ConsentDate</code></td><td>วันที่กดยินยอมข้อตกลง</td></tr>
+    </table>
+
+    <h3>📋 ชีต 3: <code>Advisor</code> — อาจารย์ที่ปรึกษา (6 คอลัมน์) 🔴 กรอกเอง</h3>
+    <p>ใช้สำหรับเป็นผู้อนุมัติขั้น 1 กรณีนักศึกษาในสาขา</p>
+    <table>
+      <tr><th>#</th><th>Header</th><th>คำอธิบาย</th><th>ตัวอย่าง</th></tr>
+      <tr><td>1</td><td><code>AdvisorID</code></td><td>รหัส (เว้นได้ ระบบ gen ให้)</td><td><code>ADV001</code></td></tr>
+      <tr><td>2</td><td><code>FullName</code></td><td>ชื่อเต็ม + ตำแหน่ง</td><td>ผศ.ดร. สมชาย ใจดี</td></tr>
+      <tr><td>3</td><td><code>Email</code></td><td>🔴 อีเมล Google Workspace</td><td><code>somchai@kku.ac.th</code></td></tr>
+      <tr><td>4</td><td><code>Division</code></td><td>สาขา/แผนก</td><td>วิศวกรรมโยธา</td></tr>
+      <tr><td>5</td><td><code>Phone</code></td><td>เบอร์โทร (ไม่บังคับ)</td><td><code>08x-xxx-xxxx</code></td></tr>
+      <tr><td>6</td><td><code>Status</code></td><td><code>Active</code> / <code>Inactive</code></td><td><code>Active</code></td></tr>
+    </table>
+
+    <h3>📋 ชีต 4: <code>DivisionStaff</code> — เจ้าหน้าที่แผนก (7 คอลัมน์) 🔴 กรอกเอง</h3>
+    <p>ผู้อนุมัติขั้น 2 ตรวจสอบวัสดุอุปกรณ์/ความปลอดภัย</p>
+    <table>
+      <tr><th>#</th><th>Header</th><th>คำอธิบาย</th></tr>
+      <tr><td>1</td><td><code>StaffID</code></td><td>รหัสเจ้าหน้าที่</td></tr>
+      <tr><td>2</td><td><code>FullName</code></td><td>ชื่อเต็ม</td></tr>
+      <tr><td>3</td><td><code>Email</code></td><td>🔴 อีเมล Google Workspace</td></tr>
+      <tr><td>4</td><td><code>Department</code></td><td>แผนก/ภาควิชา</td></tr>
+      <tr><td>5</td><td><code>Division</code></td><td>สายงาน</td></tr>
+      <tr><td>6</td><td><code>Phone</code></td><td>เบอร์โทร</td></tr>
+      <tr><td>7</td><td><code>Status</code></td><td><code>Active</code> / <code>Inactive</code></td></tr>
+    </table>
+
+    <h3>📋 ชีต 5: <code>LabHead</code> — หัวหน้าห้องปฏิบัติการ (7 คอลัมน์) 🔴 กรอกเอง</h3>
+    <p>ผู้อนุมัติขั้น 3 ตรวจสอบตารางการใช้ห้อง/เครื่องมือเฉพาะทาง</p>
+    <table>
+      <tr><th>#</th><th>Header</th><th>คำอธิบาย</th></tr>
+      <tr><td>1</td><td><code>LabHeadID</code></td><td>รหัส</td></tr>
+      <tr><td>2</td><td><code>FullName</code></td><td>ชื่อเต็ม</td></tr>
+      <tr><td>3</td><td><code>Email</code></td><td>🔴 อีเมล (ต้องตรงกับ <code>Rooms.LabHeadEmail</code>)</td></tr>
+      <tr><td>4</td><td><code>Department</code></td><td>ภาควิชา</td></tr>
+      <tr><td>5</td><td><code>ResponsibleRoomIDs</code></td><td>รหัสห้องที่ดูแล คั่นด้วยจุลภาค เช่น <code>LAB-101,LAB-102</code></td></tr>
+      <tr><td>6</td><td><code>Phone</code></td><td>เบอร์โทร</td></tr>
+      <tr><td>7</td><td><code>Status</code></td><td><code>Active</code> / <code>Inactive</code></td></tr>
+    </table>
+
+    <h3>📋 ชีต 6: <code>Admin</code> — ผู้ดูแลระบบ/หัวหน้าอาคาร (7 คอลัมน์) 🔴 กรอกเอง</h3>
+    <p>ผู้อนุมัติขั้น 4 (ขั้นสุดท้าย) ยืนยันนัดหมายสแกน Biometric</p>
+    <table>
+      <tr><th>#</th><th>Header</th><th>คำอธิบาย</th></tr>
+      <tr><td>1</td><td><code>AdminID</code></td><td>รหัส Admin</td></tr>
+      <tr><td>2</td><td><code>FullName</code></td><td>ชื่อเต็ม</td></tr>
+      <tr><td>3</td><td><code>Email</code></td><td>🔴 อีเมล (ต้องตรงกับ <code>Settings.ADMIN_EMAIL</code>)</td></tr>
+      <tr><td>4</td><td><code>Phone</code></td><td>เบอร์โทร</td></tr>
+      <tr><td>5</td><td><code>ResponsibleBuilding</code></td><td>อาคารที่ดูแล เช่น <code>B02</code></td></tr>
+      <tr><td>6</td><td><code>ResponsibleRoomIDs</code></td><td>รหัสห้องที่ดูแล คั่นด้วยจุลภาค หรือ <code>ALL</code></td></tr>
+      <tr><td>7</td><td><code>Status</code></td><td><code>Active</code> / <code>Inactive</code></td></tr>
+    </table>
+
+    <h3>📋 ชีต 7: <code>Rooms</code> — ห้องปฏิบัติการ (10 คอลัมน์) 🔴 กรอกเอง</h3>
+    <p>รายการห้องที่เปิดให้จองได้</p>
+    <table>
+      <tr><th>#</th><th>Header</th><th>คำอธิบาย</th><th>ตัวอย่าง</th></tr>
+      <tr><td>1</td><td><code>RoomID</code></td><td>🔴 รหัสห้อง (key อ้างอิงทั้งระบบ)</td><td><code>LAB-101</code></td></tr>
+      <tr><td>2</td><td><code>RoomName</code></td><td>ชื่อเต็ม</td><td>ปฏิบัติการเทคนิคโยธา 1</td></tr>
+      <tr><td>3</td><td><code>Building</code></td><td>อาคาร</td><td>B02</td></tr>
+      <tr><td>4</td><td><code>Floor</code></td><td>ชั้น</td><td>3</td></tr>
+      <tr><td>5</td><td><code>Capacity</code></td><td>ความจุ (คน)</td><td><code>30</code></td></tr>
+      <tr><td>6</td><td><code>Facilities</code></td><td>อุปกรณ์/สิ่งอำนวยความสะดวก</td><td>โปรเจคเตอร์, เครื่องทดสอบ</td></tr>
+      <tr><td>7</td><td><code>LabHeadEmail</code></td><td>🔴 อีเมลหัวหน้าห้อง (ต้องตรงกับชีต LabHead)</td><td><code>labhead@kku.ac.th</code></td></tr>
+      <tr><td>8</td><td><code>ApproverEmail</code></td><td>อีเมลเจ้าหน้าที่ดูแล (optional)</td><td><code>staff@kku.ac.th</code></td></tr>
+      <tr><td>9</td><td><code>ImageURL</code></td><td>ลิงก์รูปห้อง (optional)</td><td><code>https://...</code></td></tr>
+      <tr><td>10</td><td><code>Status</code></td><td><code>Active</code> / <code>Inactive</code></td><td><code>Active</code></td></tr>
+    </table>
+
+    <h3>📋 ชีต 8: <code>Settings</code> — ค่าตั้งค่าระบบ (4 คอลัมน์) 🔴 กรอกเอง</h3>
+    <p>ศูนย์กลางค่าตั้งค่า key-value (ดูรายละเอียดที่ <a href="#s9">ข้อ 9</a>)</p>
+    <table>
+      <tr><th>#</th><th>Header</th><th>คำอธิบาย</th><th>ตัวอย่าง</th></tr>
+      <tr><td>1</td><td><code>ConfigKey</code></td><td>🔴 ชื่อ key เช่น <code>ADMIN_EMAIL</code></td><td><code>REQUEST_ID_PREFIX</code></td></tr>
+      <tr><td>2</td><td><code>ConfigValue</code></td><td>🔴 ค่าที่ต้องการ</td><td><code>REQ-</code></td></tr>
+      <tr><td>3</td><td><code>Description</code></td><td>คำอธิบาย (optional)</td><td>คำนำหน้าเลขที่คำขอ</td></tr>
+      <tr><td>4</td><td><code>DataType</code></td><td><code>string</code> / <code>number</code> / <code>boolean</code></td><td><code>string</code></td></tr>
+    </table>
+
+    <h3>📋 ชีต 9: <code>RoomClosures</code> — ประกาศปิดห้อง (10 คอลัมน์) ⚪ กรอกเมื่อมีวันหยุด</h3>
+    <p>กรอก 1 แถวต่อประกาศ ระบบจะส่งอีเมลแจ้งทุกคนในชีตอัตโนมัติ</p>
+    <table>
+      <tr><th>#</th><th>Header</th><th>คำอธิบาย</th><th>ตัวอย่าง</th></tr>
+      <tr><td>1</td><td><code>ClosureID</code></td><td>รหัส (เว้นได้)</td><td><code>CLS-0001</code></td></tr>
+      <tr><td>2</td><td><code>Title</code></td><td>🔴 หัวข้อประกาศ</td><td>วันหยุดนักขัตฤกษ์ 1 ม.ค. 2569</td></tr>
+      <tr><td>3</td><td><code>Description</code></td><td>รายละเอียดเพิ่มเติม</td><td>ปิดทำการทั้งอาคาร</td></tr>
+      <tr><td>4</td><td><code>StartDate</code></td><td>วันเริ่มปิด (กรอกอย่างน้อยตัวใดตัวหนึ่ง Start/End)</td><td><code>01/01/2569</code></td></tr>
+      <tr><td>5</td><td><code>EndDate</code></td><td>วันสิ้นสุด</td><td><code>02/01/2569</code></td></tr>
+      <tr><td>6</td><td><code>AffectedRoomIDs</code></td><td>รหัสห้องที่ได้รับผลกระทบ คั่นจุลภาค หรือ <code>ALL</code></td><td><code>ALL</code></td></tr>
+      <tr><td>7</td><td><code>CreatedBy</code></td><td>ผู้บันทึก</td><td><code>admin@kku.ac.th</code></td></tr>
+      <tr><td>8</td><td><code>CreatedAt</code></td><td>เวลาที่บันทึก</td><td>🟡 ระบบเติม</td></tr>
+      <tr><td>9</td><td><code>Status</code></td><td><code>Active</code> / <code>Expired</code></td><td><code>Active</code></td></tr>
+      <tr><td>10</td><td><code>NotifiedAt</code></td><td>เวลาที่ส่งอีเมลแจ้งเตือน</td><td>🟡 ระบบเติม</td></tr>
+    </table>
+
+    <h3>📋 ชีต 10: <code>Logs</code> — บันทึกเหตุการณ์ (9 คอลัมน์)</h3>
+    <p>🟡 <b>ระบบเติมอัตโนมัติทั้งหมด</b> — ใช้ดูย้อนหลัง/ตรวจปัญหา ผู้ดูแลไม่ต้องกรอก</p>
+    <table>
+      <tr><th>#</th><th>Header</th><th>คำอธิบาย</th></tr>
+      <tr><td>1</td><td><code>LogID</code></td><td>รหัส log</td></tr>
+      <tr><td>2</td><td><code>Timestamp</code></td><td>วันเวลา</td></tr>
+      <tr><td>3</td><td><code>UserEmail</code></td><td>ผู้กระทำ</td></tr>
+      <tr><td>4</td><td><code>ActionType</code></td><td>ประเภท เช่น <code>Submit</code>/<code>Approve</code>/<code>Reject</code>/<code>Email</code>/<code>Calendar</code>/<code>Webhook</code></td></tr>
+      <tr><td>5</td><td><code>Action</code></td><td>รายละเอียดการกระทำ</td></tr>
+      <tr><td>6</td><td><code>TargetSheet</code></td><td>ชีตที่ถูกกระทำ เช่น <code>Requests</code></td></tr>
+      <tr><td>7</td><td><code>TargetRecordID</code></td><td>รหัสแถวที่ถูกกระทำ เช่น <code>REQ-00012</code></td></tr>
+      <tr><td>8</td><td><code>Details</code></td><td>รายละเอียดเพิ่มเติม (JSON)</td></tr>
+      <tr><td>9</td><td><code>Result</code></td><td><code>Success</code> / <code>Failed</code></td></tr>
+    </table>
+
+    <div class="ok"><strong>สรุป: ผู้ดูแลต้องกรอกเอง 6 ชีต</strong> Advisor, DivisionStaff, LabHead, Admin, Rooms, Settings (+ RoomClosures เมื่อมีวันหยุด) — ชีตที่เหลือ (Requests, Users, Logs) ระบบจัดการให้อัตโนมัติ</div>
+  </div>
+</div>
+
+<div class="ok"><b>สรุปทั้งหมด:</b> ทำครบข้อ 1–14 = อาคาร/ห้องใหม่พร้อมใช้งาน — เหลือ maintainers ดูแลประจำข้อ 15 และใช้ Troubleshooting ข้อ 16</div>
 </main>
 <footer>© CE F.A.I.R. — Deployment Guide v1.0 | เอกสารสำหรับผู้ดูแลระบบ | ไฟล์ HTML เดียวจบ</footer>
 <script>
