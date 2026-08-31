@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>คู่มือคัดลอกระบบ CE F.A.I.R. ไปยังอาคาร/ห้องปฏิบัติการอื่น (Deployment Guide)</title>
+<style>
+:root{--primary:#661003;--navy:#183666;--bg:#f6f7fb;--ok:#15884b;--warn:#b45309;}
+*{box-sizing:border-box}
+body{font-family:'Segoe UI','Sarabun',sans-serif;margin:0;background:var(--bg);color:#1f2937;line-height:1.7}
+header{background:linear-gradient(135deg,var(--primary),var(--navy));color:#fff;padding:40px 24px}
+header h1{margin:0 0 8px;font-size:1.6rem}
+header p{margin:0;opacity:.9}
+main{max-width:960px;margin:0 auto;padding:24px}
+.toc{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px 22px;margin-bottom:24px}
+.toc h2{margin:0 0 8px;font-size:1.1rem;color:var(--navy)}
+.toc ol{margin:0;padding-left:24px;columns:2}
+.toc a{color:var(--navy);text-decoration:none}
+.toc a:hover{text-decoration:underline}
+.step{background:#fff;border:1px solid #e2e8f0;border-radius:12px;margin:16px 0;box-shadow:0 1px 3px rgba(0,0,0,.05);overflow:hidden}
+.step-h{display:flex;gap:14px;align-items:center;padding:16px 20px;border-bottom:1px solid #eef2f6;background:#fdfefe}
+.num{flex:0 0 40px;height:40px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700}
+.step-h h2{margin:0;font-size:1.15rem;color:var(--navy)}
+.step-h small{color:#64748b}
+.step-b{padding:12px 22px 20px}
+.step-b h3{color:var(--primary);font-size:1rem;margin:16px 0 6px}
+.step-b ul,.step-b ol{margin:6px 0;padding-left:24px}
+.step-b li{margin:4px 0}
+code{background:#f1f5f9;padding:2px 6px;border-radius:5px;font-family:Consolas,monospace;font-size:.92em}
+pre{background:#0f1b33;color:#e6edf7;padding:14px;border-radius:8px;overflow:auto;font-family:Consolas,monospace;font-size:.85rem}
+pre code{background:none;color:inherit;padding:0}
+.note{border-left:4px solid var(--warn);background:#fffbeb;padding:10px 14px;border-radius:6px;margin:12px 0}
+.ok{border-left:4px solid var(--ok);background:#f0fdf4;padding:10px 14px;border-radius:6px;margin:12px 0}
+.danger{border-left:4px solid #b91c1c;background:#fef2f2;padding:10px 14px;border-radius:6px;margin:12px 0}
+table{border-collapse:collapse;width:100%;margin:10px 0}
+th,td{border:1px solid #e2e8f0;padding:8px 10px;text-align:left;font-size:.9rem}
+th{background:#f8fafc}
+footer{padding:24px 20px;color:#64748b;font-size:.85rem;text-align:center}
+@media(max-width:700px){.toc ol{columns:1}.num{flex:0 0 32px;height:32px;font-size:.9rem}.step-h h2{font-size:1rem}}
+</style>
+</head>
+<body>
+<header>
+<h1>🚀 คู่มือคัดลอกระบบ CE F.A.I.R. ไปยังอาคาร/ห้องปฏิบัติการอื่น (Deployment Guide)</h1>
+<p>แบบจนหลวีซับบ (step-by-step) สำหรับผู้ดูแลที่ต้องการนำระบบแม่แบบไปติดตั้งที่อาคาร/สาขาใหม่ด้วยตนเอง</p>
+</header>
+<main>
+<div class="toc">
+<h2>🧭 สารบัญ</h2>
+<ol>
+<li><a href="#s1">ข้อ 1 — เตรียมบัญชี Google และสิทธิ์</a></li>
+<li><a href="#s2">ข้อ 2 — สร้าง Google Sheet ใหม่</a></li>
+<li><a href="#s3">ข้อ 3 — เปิด Apps Script เตรียมโปรเจกต์</a></li>
+<li><a href="#s4">ข้อ 4 — คัดลอกไฟล์ซอร์สทั้ง 6 ไฟล์</a></li>
+<li><a href="#s5">ข้อ 5 — ตั้ง manifest / OAuth Scopes</a></li>
+<li><a href="#s6">ข้อ 6 — สร้างฐานข้อมูลด้วย <code>initDatabase()</code></a></li>
+<li><a href="#s7">ข้อ 7 — กรกข้อมูลพื้นฐาน: Rooms, Advisor, DivisionStaff, LabHead, Admin</a></li>
+<li><a href="#s8">ข้อ 8 — ตั้ง Script Properties</a></li>
+<li><a href="#s9">ข้อ 9 — ปรับ Settings (อีเมล, prefix, retention)</a></li>
+<li><a href="#s10">ข้อ 10 — ติดตั้ง Trigger รายวัน</a></li>
+<li><a href="#s11">ข้อ 11 — รัน validation ก่อน Deploy</a></li>
+<li><a href="#s12">ข้อ 12 — Deploy เวอร์ชันทดสอบ</a></li>
+<li><a href="#s13">ข้อ 13 — OAuth Consent + Smoke Test</a></li>
+<li><a href="#s14">ข้อ 14 — Deploy Production + จด Deployment ID</a></li>
+<li><a href="#s15">ข้อ 15 — บำรุงรักษาประจำ: Backup, ตรวจสิทธิ์, ความปลอดภัย</a></li>
+<li><a href="#s16">ข้อ 16 — Troubleshooting ปัญหาที่พบบ่อย</a></li>
+</ol>
+</div>
+
+<div class="step" id="s1">
+  <div class="step-h"><div class="num">1</div><div><h2>เตรียมบัญชี Google กับสิทธิ์ที่ต้องมี</h2><small>~5 นาที</small></div></div>
+  <div class="step-b">
+    <ul>
+      <li>ใช้บัญชี Google ขององค์กร (โดเมนเดียวกับแม่แบบ) เพื่อให้ <code>webapp.access=DOMAIN</code> ทำงานถูก</li>
+      <li>ขอสิทธิ์ Editor บน Spreadsheet ใหม่ + เข้า Apps Script Editor ได้</li>
+      <li>ยืนยันรายชื่อ: Owner (ผู้ดูแลหลัก) / Editor (ผู้ช่วย) / Viewer (เจ้าหน้าที่ตรวจ)</li>
+    </ul>
+    <div class="note">💡 แนะนำ ตั้งบัญชี Service Owner ร่วมกัน (เช่น <code>lab-admin@org.ac.th</code>) เพื่อไม่ให้เฉพาะบุคคลเดียวค้นหาไฟล์</div>
+    <div class="ok">✅ Checkpoint: ผู้ดูแล + สิทธิ์พร้อม</div>
+  </div>
+</div>
+
+<div class="step" id="s2">
+  <div class="step-h"><div class="num">2</div><div><h2>สร้าง Google Sheet ใหม่</h2><small>~3 นาที</small></div></div>
+  <div class="step-b">
+    <ol>
+      <li>ไปที่ <a href="https://sheets.google.com" target="_blank">sheets.google.com</a> → Blank</li>
+      <li>ตั้งชื่อ เช่น <code>CE-FAIR-SCI-B02</code></li>
+      <li>เก็บ Spreadsheet ID จาก URL (ระหว่าง <code>/d/</code> กับ <code>/edit</code>)</li>
+    </ol>
+    <div class="ok">✅ Checkpoint: Spreadsheet พร้อม + ID จดไว้</div>
+  </div>
+</div>
+
+<div class="step" id="s3">
+  <div class="step-h"><div class="num">3</div><div><h2>เปิด Apps Script เตรียมโปรเจกต์</h2><small>~3 นาที</small></div></div>
+  <div class="step-b">
+    <ol>
+      <li>เปิด Sheet ใหม่ → <b>Extensions → Apps Script</b></li>
+      <li>เปลี่ยนชื่อโปรเจกต์ เช่น <code>CE-FAIR-B02</code></li>
+      <li>สร้างไฟล์เปรียง: Code.gs, Index.html, JavaScript.html, Stylesheet.html, ReviewModal.html</li>
+    </ol>
+    <div class="note">💡 ถ้าใช้ clasp ก็ clone แล้วปรับ scriptId ไปที่โปรเจกต์ใหม่</div>
+  </div>
+</div>
+
+<div class="step" id="s4">
+  <div class="step-h"><div class="num">4</div><div><h2>คัดลอกไฟล์ซอร์สทั้ง 6 ไฟล์</h2><small>~10 นาที</small></div></div>
+  <div class="step-b">
+    <table>
+      <tr><th>ไฟล์</th><th>หน้าที่</th><th>จำเป็นไหม</th></tr>
+      <tr><td><code>Code.gs</code></td><td>Backend, schema, token security</td><td>บังคับ</td></tr>
+      <tr><td><code>Index.html</code></td><td>Container 2 แท็บ + include</td><td>บังคับ</td></tr>
+      <tr><td><code>JavaScript.html</code></td><td>Frontend Vue, cache, components</td><td>บังคับ</td></tr>
+      <tr><td><code>Stylesheet.html</code></td><td>ธีม + responsive</td><td>บังคับ</td></tr>
+      <tr><td><code>ReviewModal.html</code></td><td>Modal ดูรายละเอียด/อนุมัติ</td><td>บังคับ</td></tr>
+      <tr><td><code>appsscript.json</code></td><td>Runtime, Web App, Scopes</td><td>บังคับ</td></tr>
+      <tr><td><code>validate.js</code></td><td>ตรวจก่อน deploy</td><td>แนะนำ</td></tr>
+    </table>
+    <div class="note">🧾 ใช้ clasp: ตั้ง <code>.claspignore</code> ให้ push เฉพาะ 6 ไฟล์นี้</div>
+    <div class="danger">⛔ ก่อนนำเข้าตรวจให้แน่ใจ — อย่าให้มี secret/API key หลงค้างอยู่ในโค้ด</div>
+  </div>
+</div>
+
+<div class="step" id="s5">
+  <div class="step-h"><div class="num">5</div><div><h2>ตั้ง manifest / OAuth Scopes</h2><small>~3 นาที</small></div></div>
+  <div class="step-b">
+    <pre>{
+  "timeZone": "Asia/Bangkok",
+  "dependencies": {"enabledAdvanced": []},
+  "executionApi": {"version": "V8"},
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/calendar",
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/script.external_request",
+    "https://www.googleapis.com/auth/script.scriptapp",
+    "https://www.googleapis.com/auth/script.send_mail"
+  ],
+  "webapp": {"executeAs": "USER_ACCESSING", "access": "DOMAIN"}
+}</pre>
+    <div class="note">💡 ทุกครั้งที่ปรับ scopes ให้ deploy test → reconsent ก่อน production</div>
+  </div>
+</div>
+
+<div class="step" id="s6">
+  <div class="step-h"><div class="num">6</div><div><h2>สร้างฐานข้อมูลด้วย <code>initDatabase()</code></h2><small>~5 นาที</small></div></div>
+  <div class="step-b">
+    <ol>
+      <li>Apps Script Editor → ฟังก์ชัน <code>initDatabase</code> → Run</li>
+      <li>สร้างชีต 10 แท็บ: Requests, Users, Rooms, Settings, RoomClosures, Advisor, DivisionStaff, LabHead, Admin, Logs</li>
+      <li>เติม metadata columns ต่อท้าย Requests (12 คอลัมน์ token metadata)</li>
+      <li>ตรวจผล log ใน Logs sheet</li>
+    </ol>
+    <div class="ok">✅ Checkpoint: 10 ชีต + Requests ครบ 61 คอลัมน์</div>
+  </div>
+</div>
+<div class="step" id="s7">
+  <div class="step-h"><div class="num">7</div><div><h2>ใส่ข้อมูลพื้นฐาน: Rooms, Advisor, DivisionStaff, LabHead, Admin</h2><small>~15 นาที</small></div></div>
+  <div class="step-b">
+    <h3>Rooms</h3>
+    <ul><li>ใส่ RoomID, ชื่อ, อาคาร, ชั้น, ความจุ, facilities, อีเมล Lab Head, image URL, status</li></ul>
+    <h3>Advisor</h3>
+    <ul><li>อีเมลอาจารย์ที่ปรึกษา (ขั้น 1)</li></ul>
+    <h3>DivisionStaff / LabHead / Admin</h3>
+    <ul><li>อีเมลผู้อนุมัติแต่ละขั้น และสิทธิ์จาก Dashboard</li></ul>
+    <div class="note">💡 คัดลอกจาก Sheet ตัวอย่างของแม่แบบเดิมได้เลย แล้วปรับรายชื่อตามหน่วยงานใหม่</div>
+  </div>
+</div>
+
+<div class="step" id="s8">
+  <div class="step-h"><div class="num">8</div><div><h2>ตั้ง Script Properties (ORG_API_KEY, BIOMETRIC_*)</h2><small>~5 นาที</small></div></div>
+  <div class="step-b">
+    <p>Apps Script Editor → Project Settings → Script Properties → Add property:</p>
+    <table>
+      <tr><th>Key</th><th>ความหมาย</th><th>หมายเหตุ</th></tr>
+      <tr><td><code>ORG_API_KEY</code></td><td>KKU Gen AI Key</td><td>ใช้ AI/Chatbot เท่านั้น</td></tr>
+      <tr><td><code>BIOMETRIC_API_URL</code></td><td>Webhook URL สแกน Biometric</td><td>ถ้ามีการเชื่อมต่อ</td></tr>
+      <tr><td><code>BIOMETRIC_WEBHOOK_SECRET</code></td><td>shared secret Webhook</td><td>จำเป็นสำหรับ Webhook</td></tr>
+    </table>
+    <div class="danger">⛔ ห้ามใส่ค่าจริงในซอร์ส/เอกสาร — เก็บ Script Properties เท่านั้น</div>
+  </div>
+</div>
+
+<div class="step" id="s9">
+  <div class="step-h"><div class="num">9</div><div><h2>ปรับ Settings (อีเมล, prefix, retention)</h2><small>~5 นาที</small></div></div>
+  <div class="step-b">
+    <ul>
+      <li><code>ADMIN_EMAIL</code> → อีเมล Admin ใหม่ของหน่วยงาน</li>
+      <li><code>HEAD_OF_CIVIL_ENG_EMAIL</code> → หัวหน้าสาขาใหม่</li>
+      <li><code>REQUEST_ID_PREFIX</code> → เช่น <code>B02-</code> กันรหัสข้ามอาคาร</li>
+      <li><code>DATA_RETENTION_MONTHS</code> → เช่น <code>12</code></li>
+    </ul>
+  </div>
+</div>
+
+<div class="step" id="s10">
+  <div class="step-h"><div class="num">10</div><div><h2>ติดตั้ง Trigger รายวัน</h2><small>~3 นาที</small></div></div>
+  <div class="step-b">
+    <p>รัน <code>setupDailyTriggers()</code> → ผล:</p>
+    <ul>
+      <li><code>updateExpiredRequests</code> — ทุกวัน 01:00</li>
+      <li><code>sendPendingApprovalReminders</code> — ทุกวัน 08:00</li>
+      <li><code>applyDataRetentionPolicy</code> — ทุกวัน 02:00</li>
+    </ul>
+    <div class="ok">✅ Checkpoint: ฟังก์ชันตอบ <code>{success:true}</code></div>
+  </div>
+</div>
+
+<div class="step" id="s11">
+  <div class="step-h"><div class="num">11</div><div><h2>รัน validation ก่อน Deploy</h2><small>~2 นาที (ถ้าใช้ clasp/Git)</small></div></div>
+  <div class="step-b">
+    <pre>node validate.js
+# หรือ
+npm run validate</pre>
+    <p>ตรวจ: ไฟล์ครบ, syntax OK, <code>webapp.access=DOMAIN</code>, ไม่มี secret/ต้องห้าม pattern, Q&A=50, components, functions, brace balance, token headers</p>
+    <div class="ok">✅ Checkpoint: แสดง <code>ALL CHECKS PASSED</code> (exit 0)</div>
+  </div>
+</div>
+<div class="step" id="s12">
+  <div class="step-h"><div class="num">12</div><div><h2>Deploy เวอร์ชันทดสอบ (Test Web App)</h2><small>~5 นาที</small></div></div>
+  <div class="step-b">
+    <ol>
+      <li>Apps Script → <b>Deploy → New deployment → Web app</b></li>
+      <li>Execute as: <b>User accessing</b> / Access: <b>Anyone within domain</b></li>
+      <li>คัดลอก <b>Web App URL</b> ไปใช้ทดลองก่อน</li>
+    </ol>
+    <div class="note">💡 อย่า deploy production ก่อนทดสอบเสมอ</div>
+  </div>
+</div>
+
+<div class="step" id="s13">
+  <div class="step-h"><div class="num">13</div><div><h2>OAuth Consent + Smoke Test ครบทุก service</h2><small>อย่า deploy production ก่อนครบ</small></div></div>
+  <div class="step-b">
+    <ul>
+      <li>☐ Consent screen แสดง scope ตาม manifest</li>
+      <li>☐ ส่งอีเมล submit สำเร็จ (Logs Email = Success)</li>
+      <li>☐ Calendar: Biometric Event สร้างแล้ว</li>
+      <li>☐ Drive upload ได้ (whitelist, &lt;5MB) และ reject mime อื่น</li>
+      <li>☐ Webhook พร้อมส่ง (ถ้าตั้ง secret)</li>
+      <li>☐ Execution logs: ไม่มี ERROR</li>
+    </ul>
+  </div>
+</div>
+
+<div class="step" id="s14">
+  <div class="step-h"><div class="num">14</div><div><h2>Deploy Production + จด Deployment ID / Git tag</h2><small>~5 นาที</small></div></div>
+  <div class="step-b">
+    <ul>
+      <li>Deploy → New deployment (production)</li>
+      <li>จด <code>deploymentId</code> / Web App URL</li>
+      <li>ถ้าใช้ Git: commit → <code>git tag v1.0-bXX</code></li>
+      <li>แจ้ง maintainers ให้ backup revision ไว้</li>
+    </ul>
+  </div>
+</div>
+
+<div class="step" id="s15">
+  <div class="step-h"><div class="num">15</div><div><h2>บำรงรักษาประจำ: Backup, ตรวจสิทธิ์, ความปลอดภัย</h2><small>weekly/monthly/annual</small></div></div>
+  <div class="step-b">
+    <ul>
+      <li><b>Backup Sheet</b> — ทุกสัปดาห์ (manual copy หรือ trigger <code>DriveApp.makeCopy()</code>)</li>
+      <li><b>ทบทวนสิทธิ์ Admin</b> — annual: ตัด Admin/DivisionStaff ที่ลาออก + rotate WEBHOOK_SECRET</li>
+      <li><b>ตรว Logs</b> — ทุกสัปดาห์ ดูผล retention job ทำงานครบ</li>
+    </ul>
+  </div>
+</div>
+
+<div class="step" id="s16">
+  <div class="step-h"><div class="num">16</div><div><h2>Troubleshooting ปัญหาที่พบบ่อย</h2><small>ปัญหาหลัก</small></div></div>
+  <div class="step-b">
+    <table>
+      <tr><th>อาการ</th><th>สาเหตุ</th><th>วิธีแก้</th></tr>
+      <tr><td>verifyToken ล็อก</td><td>failed attempts ครบ 5</td><td>Reset FailedAttempts col → 0 (Admin)</td></tr>
+      <tr><td>ไฟล์รูป 403</td><td>file Drive restricted</td><td>ตรว folder/permissions</td></tr>
+      <tr><td>Webhook ไม่ยิง</td><td>ไม่มี WEBHOOK_SECRET</td><td>ตรว Script Properties</td></tr>
+      <tr><td>OAuth ไม่ยอม</td><td>oauthScopes ไม่ตรง manifest</td><td>redeploy Test → consent ใหม่</td></tr>
+      <tr><td>Requests header ขาด</td><td>initDatabase ยังไม่รัน</td><td>รัน + ดู Logs</td></tr>
+      <tr><td>validate fail</td><td>มี secret ในสคริปต์</td><td>ดูเช็ก forbidden patterns</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="ok"><b>สรุป:</b> ทำครบข้อ 1–14 = อาคาร/ห้องใหม่พร้อมใช้งานแล้ว — เหลือ maintainers ดูแลประจำข้อ 15 และใช้ Troubleshooting ข้อ 16</div>
+</main>
+<footer>© CE F.A.I.R. — Deployment Guide v1.0 | เอกสารสำหรับผู้ดูแลระบบ | ไฟล์ HTML เดียวจบ</footer>
+</body>
+</html>
