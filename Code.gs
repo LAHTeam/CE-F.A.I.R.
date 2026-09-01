@@ -1,8 +1,8 @@
 /**
  * ==============================================================================
- * ระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน
+ * ระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน (CE F.A.I.R.: Civil Engineering Flow Access Instant Registration)
  * Google Apps Script Backend (Code.gs)
- * ระบบ CE F.A.I.R. (Department of Civil Engineering, KKU)
+ * Department of Civil Engineering, KKU
  * ==============================================================================
  */
 
@@ -139,7 +139,7 @@ function doGet(e) {
           template.preloadedUserEmail = getCurrentUserEmail();
           template.serverParamsJson = JSON.stringify(params);
           return template.evaluate()
-            .setTitle('ระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน')
+            .setTitle('ระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน (CE F.A.I.R.: Civil Engineering Flow Access Instant Registration)')
             .addMetaTag('viewport', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no')
             .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
         }
@@ -160,7 +160,7 @@ function doGet(e) {
   template.serverParamsJson = JSON.stringify(params);
 
   return template.evaluate()
-    .setTitle('ระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน')
+    .setTitle('ระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน (CE F.A.I.R.: Civil Engineering Flow Access Instant Registration)')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -416,10 +416,10 @@ function initDatabase() {
 
   // Settings defaults
   var defaultSettings = [
-    ['SYSTEM_NAME', 'ระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน', 'ชื่อระบบ', 'String'],
+    ['SYSTEM_NAME', 'ระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน (CE F.A.I.R.: Civil Engineering Flow Access Instant Registration)', 'ชื่อระบบ', 'String'],
     ['HEAD_OF_CIVIL_ENG_EMAIL', 'lareew@kku.ac.th', 'อีเมลหัวหน้าสาขาวิชาวิศวกรรมโยธา', 'String'],
     ['ADMIN_EMAIL', 'pacnim@kku.ac.th', 'อีเมลผู้ดูแลระบบ/หัวหน้าตึก', 'String'],
-    ['SMTP_SENDER_NAME', 'ระบบ CE F.A.I.R.', 'ชื่อผู้ส่งอีเมล', 'String'],
+    ['SMTP_SENDER_NAME', 'CE F.A.I.R. (Civil Engineering Flow Access Instant Registration)', 'ชื่อผู้ส่งอีเมล', 'String'],
     ['ACCESS_DURATION_MONTHS', '3', 'ระยะเวลาเข้าใช้งาน (เดือน)', 'Number'],
     ['TIMEZONE', 'Asia/Bangkok', 'โซนเวลา', 'String'],
     ['MAINTENANCE_MODE', 'FALSE', 'โหมดปิดปรับปรุง', 'Boolean'],
@@ -1484,7 +1484,7 @@ function processApproval(requestId, stage, decision, note, token, extra) {
 
 function sendNotification(type, payload) {
   try {
-    var senderName = getSetting('SMTP_SENDER_NAME', 'ระบบ CE F.A.I.R.');
+    var senderName = getSetting('SMTP_SENDER_NAME', 'CE F.A.I.R. (Civil Engineering Flow Access Instant Registration)');
     var webAppUrl = ScriptApp.getService().getUrl();
     var to = payload.to;
     if (!to) return false;
@@ -1499,7 +1499,7 @@ function sendNotification(type, payload) {
       var aiCard = '';
       if (payload.aiSummary) {
         aiCard = '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-left:4px solid #10b981;padding:14px;border-radius:6px;margin:15px 0;">' +
-          '<div style="font-weight:bold;color:#065f46;font-size:13px;margin-bottom:6px;">🤖 บทวิเคราะห์และสรุปย่อจาก AI (ระบบ CE F.A.I.R.)</div>' +
+          '<div style="font-weight:bold;color:#065f46;font-size:13px;margin-bottom:6px;">🤖 บทวิเคราะห์และสรุปย่อจาก AI (CE F.A.I.R.: Civil Engineering Flow Access Instant Registration)</div>' +
           '<div style="font-size:13px;color:#1e293b;line-height:1.5;">' + payload.aiSummary.replace(/\n/g, '<br>') + '</div>' +
           '</div>';
       }
@@ -1985,7 +1985,7 @@ function buildClosureEmailHtml(title, description, startDate, endDate, affectedR
  */
 function sendRoomClosureNotification(closureData) {
   try {
-    var senderName = getSetting('SMTP_SENDER_NAME', 'ระบบ CE F.A.I.R.');
+    var senderName = getSetting('SMTP_SENDER_NAME', 'CE F.A.I.R. (Civil Engineering Flow Access Instant Registration)');
     var adminEmail = getSetting('ADMIN_EMAIL', 'pacnim@kku.ac.th');
     var recipients = collectAllEmailsInSpreadsheet();
     if (!recipients.length) {

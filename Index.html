@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>ระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน</title>
+  <title>ระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน (CE F.A.I.R.: Civil Engineering Flow Access Instant Registration)</title>
 
   <!-- Preconnect & Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -101,7 +101,7 @@
 
   </div>
 
-  <!-- KKU Gen AI Chatbot Widget -->
+  <!-- KKU IntelSphere API Chatbot Widget -->
   <script type="module" src="https://gen.ai.kku.ac.th/widget/chat-widget.es.js" defer></script>
   <!-- Chatbot widget is enabled only when its provider configuration is injected securely. -->
 
@@ -113,7 +113,7 @@
   <!-- Inject Preloaded User Email for 0ms Fast Auto-fill -->
   <script>
     window.PRELOADED_USER_EMAIL = "<?= preloadedUserEmail || '' ?>";
-    window.SERVER_PARAMS = <?!= serverParamsJson || '{}' ?>;
+    window.SERVER_PARAMS = <?= serverParamsJson || '{}' ?>;
   </script>
 
   <!-- Main JavaScript App (ReviewModal must be included first) -->

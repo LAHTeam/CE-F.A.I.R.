@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>คู่มือคัดลอกระบบ CE F.A.I.R. ไปยังอาคาร/ห้องปฏิบัติการอื่น (Deployment Guide)</title>
+<title>คู่มือคัดลอกระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน (CE F.A.I.R.: Civil Engineering Flow Access Instant Registration) ไปยังอาคาร/ห้องปฏิบัติการอื่น (Deployment Guide)</title>
 <style>
 :root{
   --primary:#661003;--primary-2:#8c1a05;--navy:#183666;--navy-2:#2756a8;
@@ -132,17 +132,78 @@ footer a{color:var(--navy-2);text-decoration:none}
   .substep{flex-direction:column;gap:6px}
   .progress label{display:none}
 }
+
+/* Brand: ระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน (CE F.A.I.R.: Civil Engineering Flow Access Instant Registration) */
+.brand-name{color:#fde68a;font-weight:700;letter-spacing:1px}
+.brand-tag{display:inline-block;background:rgba(253,230,138,.18);border:1px solid rgba(253,230,138,.4);color:#fde68a;padding:3px 10px;border-radius:6px;font-size:.82rem;font-weight:600;letter-spacing:.5px;margin-left:6px}
+.brand-watermark{position:fixed;right:18px;bottom:14px;opacity:.35;font-size:.75rem;color:var(--muted);z-index:40;pointer-events:none;font-weight:600;letter-spacing:.5px}
+
+/* Time summary banner */
+.time-summary{background:linear-gradient(135deg,#eef2ff,#f0f9ff);border:1px solid #c7d2fe;border-radius:12px;padding:14px 20px;margin-bottom:20px;display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+.time-summary .ts-item{display:flex;align-items:center;gap:6px;font-size:.9rem;color:var(--navy)}
+.time-summary .ts-item b{color:var(--primary);font-size:1.05rem}
+.time-summary .ts-divider{color:#c7d2fe}
+
+/* Optional marker */
+.optional-marker{display:inline-block;background:linear-gradient(135deg,#ddd6fe,#c4b5fd);color:#5b21b6;padding:3px 10px;border-radius:999px;font-size:.75rem;font-weight:700;letter-spacing:.4px;margin-left:8px;vertical-align:middle}
+.optional-step{position:relative}
+.optional-step::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,#a78bfa,#7c3aed)}
+
+/* Toolbar (search + print) */
+.toolbar{position:fixed;left:18px;bottom:18px;z-index:60;display:flex;gap:8px;background:rgba(255,255,255,.95);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:999px;padding:6px;box-shadow:0 4px 14px rgba(0,0,0,.08)}
+.toolbar button{background:transparent;border:none;cursor:pointer;padding:8px 12px;border-radius:999px;font-size:.85rem;font-weight:600;color:var(--navy);transition:background .2s;display:flex;align-items:center;gap:4px;font-family:inherit}
+.toolbar button:hover{background:#f1f5f9}
+.toolbar .search-wrap{display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px}
+.toolbar input.search{border:none;outline:none;background:transparent;font-size:.9rem;width:180px;color:var(--text);font-family:inherit}
+.toolbar input.search:focus{outline:none}
+.search-highlight{background:#fef08a;border-radius:3px;padding:0 2px}
+.search-count{font-size:.78rem;color:var(--muted);margin-left:4px;font-weight:500}
+
+/* Side nav (desktop only) */
+.sidenav{position:fixed;right:16px;top:50%;transform:translateY(-50%);z-index:45;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:12px;padding:12px 10px;max-height:70vh;overflow:auto;box-shadow:0 4px 16px rgba(0,0,0,.06);display:none;width:200px}
+.sidenav h4{margin:0 0 8px;font-size:.78rem;color:var(--navy);font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:0 4px}
+.sidenav ol{list-style:none;padding:0;margin:0;counter-reset:snav}
+.sidenav li{counter-increment:snav;margin:1px 0}
+.sidenav li a{display:flex;gap:8px;padding:6px 8px;border-radius:6px;text-decoration:none;color:var(--text);font-size:.78rem;line-height:1.3;transition:background .15s}
+.sidenav li a::before{content:counter(snav);flex:0 0 18px;height:18px;border-radius:50%;background:#e5e7eb;color:#475569;font-size:.7rem;font-weight:700;display:flex;align-items:center;justify-content:center}
+.sidenav li a:hover{background:#f1f5f9;color:var(--primary)}
+.sidenav li a.active{background:var(--primary);color:#fff}
+.sidenav li a.active::before{background:rgba(255,255,255,.3);color:#fff}
+@media(min-width:1300px){.sidenav{display:block}}
+
+/* Print */
+@media print{
+  body{font-size:11px;background:#fff;color:#000}
+  header{background:#fff!important;color:#000!important;padding:20px;border-bottom:2px solid #000}
+  header h1{font-size:18px;color:#000}
+  header p, header .meta span{color:#000!important}
+  .progress, .toolbar, .sidenav, .brand-watermark{display:none!important}
+  .toc{page-break-after:always}
+  .step{page-break-inside:avoid;border:1px solid #ccc;margin:10px 0;box-shadow:none}
+  .step-h{background:#f5f5f5!important}
+  .step-h h2{color:#000}
+  .step-b{padding:10px 14px}
+  a{color:#000;text-decoration:underline}
+  .tip,.ok,.note,.danger{border:1px solid #ccc;background:#fff!important;color:#000!important}
+  table{border:1px solid #000}
+  th{background:#ddd!important;color:#000!important}
+  code{background:#f0f0f0!important;color:#000!important}
+  pre{background:#f5f5f5!important;color:#000!important;border:1px solid #ccc}
+  .checklist li::before{content:'☐ '!important}
+  h2,h3{page-break-after:avoid}
+}
 </style>
 </head>
 <body>
 <header>
   <div class="wrap">
-    <span class="badge">📘 Deployment Guide · v1.1</span>
-    <h1>🚀 คู่มือคัดลอกระบบ CE F.A.I.R. ไปยังอาคาร/ห้องปฏิบัติการอื่น</h1>
-    <p>แบบจับมือทำทีละขั้นตอน (step-by-step) สำหรับผู้ดูแลที่ต้องการนำระบบแม่แบบไปติดตั้งที่อาคาร/สาขาใหม่ด้วยตนเอง — แม้ไม่เคยใช้ Apps Script มาก่อนก็ทำตามได้</p>
+    <span class="badge">📘 Deployment Guide · v1.2</span>
+    <h1>🚀 คู่มือคัดลอก <span class="brand-name">ระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน (CE F.A.I.R.: Civil Engineering Flow Access Instant Registration)</span> ไปยังอาคาร/ห้องปฏิบัติการอื่น</h1>
+    <p>แบบจับมือทำทีละขั้นตอน (step-by-step) สำหรับผู้ดูแลที่ต้องการนำระบบแม่แบบ <span class="brand-tag">CE F.A.I.R. (Civil Engineering Flow Access Instant Registration)</span> ไปติดตั้งที่อาคาร/สาขาใหม่ด้วยตนเอง — แม้ไม่เคยใช้ Apps Script มาก่อนก็ทำตามได้</p>
     <div class="meta">
-      <span>🕒 รวม ~1.5–2 ชม.</span>
-      <span>📑 16 ขั้นตอน</span>
+      <span>🏛️ <b style="color:#fde68a">CE F.A.I.R. (Civil Engineering Flow Access Instant Registration)</b></span>
+      <span>🕒 MVP ~40–50 นาที · ครบทั้งหมด ~1.5–2 ชม.</span>
+      <span>📑 16 ขั้นตอน (+ภาคผนวก)</span>
       <span>👤 ผู้ดูแลระบบ/IT</span>
       <span>🌐 Apps Script + Google Sheet</span>
     </div>
@@ -159,7 +220,7 @@ footer a{color:var(--navy-2);text-decoration:none}
 <main>
 <div class="intro">
   <h2>👋 สำหรับผู้ที่ไม่เคยใช้ Apps Script มาก่อน</h2>
-  <p><b>Apps Script</b> คือเครื่องมือฟรีของ Google ที่ฝังอยู่ใน Google Sheet/Docs/Slide — ให้คุณเขียนโค้ด JavaScript รันฝั่งเซิร์ฟเวอร์ของ Google ได้โดยไม่ต้องตั้งเซิร์ฟเวอร์เอง ระบบ CE F.A.I.R. ใช้ Apps Script ทำหน้าที่ "backend" ทั้งหมด (ส่งอีเมล สร้างปฏิทิน อัปโหลดไฟล์ ฯลฯ)</p>
+  <p><b>Apps Script</b> คือเครื่องมือฟรีของ Google ที่ฝังอยู่ใน Google Sheet/Docs/Slide — ให้คุณเขียนโค้ด JavaScript รันฝั่งเซิร์ฟเวอร์ของ Google ได้โดยไม่ต้องตั้งเซิร์ฟเวอร์เอง ระบบ <b>CE F.A.I.R.</b> (Civil Engineering Flow Access Instant Registration) ใช้ Apps Script ทำหน้าที่ "backend" ทั้งหมด (ส่งอีเมล สร้างปฏิทิน อัปโหลดไฟล์ ฯลฯ)</p>
   <p><b>สิ่งที่คุณต้องรู้พื้นฐานมีแค่นี้:</b></p>
   <div class="pillrow">
     <span class="pill">📄 <b>Google Sheet</b> = ฐานข้อมูลของเรา</span>
@@ -169,6 +230,16 @@ footer a{color:var(--navy-2);text-decoration:none}
     <span class="pill">⏰ <b>Trigger</b> = ตั้งเวลาให้รันอัตโนมัติ</span>
   </div>
   <p style="margin-top:12px">📖 คู่มือนี้จะพาไปทีละคลิก — ไม่ต้องเขียนโค้ดเอง แค่ <b>คัดลอกไฟล์</b>, <b>กดปุ่ม Run</b>, <b>ตั้งค่า</b> ตามลำดับ หากติดขัดข้อไหน ดู <a href="#s16">Troubleshooting (ข้อ 16)</a> ท้ายเอกสาร</p>
+</div>
+
+<div class="time-summary">
+  <div class="ts-item">⏱️ <b>MVP:</b> ~40–50 นาที (ข้อ 1–9, 11–14)</div>
+  <span class="ts-divider">|</span>
+  <div class="ts-item">🔧 <b>ครบทั้งหมด:</b> ~1.5–2 ชม. (+ข้อ 10, 15)</div>
+  <span class="ts-divider">|</span>
+  <div class="ts-item">📖 <b>อ้างอิง:</b> ข้อ 15–16 อ่านเมื่อต้องการ</div>
+  <span class="ts-divider">|</span>
+  <div class="ts-item">🏛️ <b>CE F.A.I.R. (Civil Engineering Flow Access Instant Registration)</b> v1.0</div>
 </div>
 
 <div class="toc">
@@ -350,7 +421,7 @@ footer a{color:var(--navy-2);text-decoration:none}
     <p>Apps Script Editor → Project Settings → Script Properties → Add property:</p>
     <table>
       <tr><th>Key</th><th>ความหมาย</th><th>หมายเหตุ</th></tr>
-      <tr><td><code>ORG_API_KEY</code></td><td>KKU Gen AI Key</td><td>ใช้ AI/Chatbot เท่านั้น</td></tr>
+      <tr><td><code>ORG_API_KEY</code></td><td>KKU IntelSphere API Key</td><td>ใช้ AI/Chatbot เท่านั้น</td></tr>
       <tr><td><code>BIOMETRIC_API_URL</code></td><td>Webhook URL สแกน Biometric</td><td>ถ้ามีการเชื่อมต่อ</td></tr>
       <tr><td><code>BIOMETRIC_WEBHOOK_SECRET</code></td><td>shared secret Webhook</td><td>จำเป็นสำหรับ Webhook</td></tr>
     </table>
@@ -412,8 +483,8 @@ footer a{color:var(--navy-2);text-decoration:none}
   </div>
 </div>
 
-<div class="step" id="s10">
-  <div class="step-h"><div class="num">10</div><div><h2>ติดตั้ง Trigger รายวัน</h2><small>~5 นาที · <span class="time">ฟังก์ชันใน Apps Script</span></small></div></div>
+<div class="step optional-step" id="s10">
+  <div class="step-h"><div class="num">10</div><div><h2>ติดตั้ง Trigger รายวัน <span class="optional-marker">OPTIONAL</span></h2><small>~5 นาที · <span class="time">ฟังก์ชันใน Apps Script</span></small></div></div>
   <div class="step-b">
     <span class="newbie">🟡 สำหรับมือใหม่</span>
     <p><b>Trigger</b> คือ "นาฬิกาปลุก" ที่บอกให้ Apps Script รันฟังก์ชันอัตโนมัติตามเวลาที่ตั้ง — ไม่ต้องเปิดเครื่องทิ้งไว้ Google จะรันให้เอง</p>
@@ -536,8 +607,8 @@ npm run validate</pre>
   </div>
 </div>
 
-<div class="step" id="s15">
-  <div class="step-h"><div class="num">15</div><div><h2>บำรงรักษาประจำ: Backup, ตรวจสิทธิ์, ความปลอดภัย</h2><small>weekly/monthly/annual</small></div></div>
+<div class="step optional-step" id="s15">
+  <div class="step-h"><div class="num">15</div><div><h2>บำรงรักษาประจำ: Backup, ตรวจสิทธิ์, ความปลอดภัย <span class="optional-marker">ONGOING</span></h2><small>weekly/monthly/annual</small></div></div>
   <div class="step-b">
     <ul>
       <li><b>Backup Sheet</b> — ทุกสัปดาห์ (manual copy หรือ trigger <code>DriveApp.makeCopy()</code>)</li>
@@ -724,7 +795,7 @@ npm run validate</pre>
 
 <div class="ok"><b>สรุปทั้งหมด:</b> ทำครบข้อ 1–14 = อาคาร/ห้องใหม่พร้อมใช้งาน — เหลือ maintainers ดูแลประจำข้อ 15 และใช้ Troubleshooting ข้อ 16</div>
 </main>
-<footer>© CE F.A.I.R. — Deployment Guide v1.0 | เอกสารสำหรับผู้ดูแลระบบ | ไฟล์ HTML เดียวจบ</footer>
+<footer>© ระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน (CE F.A.I.R.: Civil Engineering Flow Access Instant Registration) — Deployment Guide v1.0 | เอกสารสำหรับผู้ดูแลระบบ | ไฟล์ HTML เดียวจบ</footer>
 <script>
 (function(){
   // Progress bar — ติดตามว่าผู้อ่านเลื่อนผ่านกี่ % ของ step

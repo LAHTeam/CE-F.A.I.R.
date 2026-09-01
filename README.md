@@ -1,10 +1,10 @@
-# ระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน (ระบบ CE F.A.I.R.)
-> ระบบบริหารจัดการและขออนุมัติเข้าใช้ห้องปฏิบัติการนอกเวลาราชการ สาขาวิชาวิศวกรรมโยธา คณะวิศวกรรมศาสตร์ มหาวิทยาลัยขอนแก่น  
+# ระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน (CE F.A.I.R.: Civil Engineering Flow Access Instant Registration)
+> ระบบบริหารจัดการและขออนุมัติเข้าใช้ห้องปฏิบัติการนอกเวลาปฏิบัติงาน สาขาวิชาวิศวกรรมโยธา คณะวิศวกรรมศาสตร์ มหาวิทยาลัยขอนแก่น  
 > พัฒนาด้วย Google Apps Script V8 + Vue.js 3 + Pure Fast CSS
 
 ---
 
-## 📌 จุดเด่นและการทำงานหลักของระบบ CE F.A.I.R.
+## 📌 จุดเด่นและการทำงานหลักของระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน (CE F.A.I.R.: Civil Engineering Flow Access Instant Registration)
 
 1. **โครงสร้าง 2 แท็บหลัก (Clean 2-Tab Design)**:
    - 📝 **ยื่นคำขอ (Request Access)**: ฟอร์มยื่นคำขอแบบ Stepper 6 ขั้นตอน
@@ -63,7 +63,7 @@
   - `✓ อนุมัติคำขอ` (สีเขียว)
   - `✕ ปฏิเสธ` (สีแดง)
   - `🔍 ดูรายละเอียดคำขอ` (เปิดหน้าต่าง Review Modal บนแดชบอร์ดโดยตรง)
-* **บทวิเคราะห์และคำแนะนำจาก AI (ORG AI / KKU Gen AI)**:
+* **บทวิเคราะห์และคำแนะนำจาก AI (KKU IntelSphere API)**:
   - สรุปย่อเนื้องาน ข้อสังเกตความปลอดภัย และคำแนะนำประกอบการตัดสินใจ
   - มีระบบ Fallback อัจฉริยะหาก API ขัดข้อง
 * **ปุ่มกลับหน้าหลัก**:
@@ -85,11 +85,11 @@
 
 | Config Key | Value | Description |
 |---|---|---|
-| `SYSTEM_NAME` | `ระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน` | ชื่อระบบทางการ |
+| `SYSTEM_NAME` | `ระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน (CE F.A.I.R.: Civil Engineering Flow Access Instant Registration)` | ชื่อระบบทางการ |
 | `HEAD_OF_CIVIL_ENG_EMAIL` | `lareew@kku.ac.th` | อีเมลหัวหน้าสาขาวิชาวิศวกรรมโยธา |
 | `ADMIN_EMAIL` | `pacnim@kku.ac.th` | อีเมลหัวหน้าตึก / ผู้ดูแลระบบ |
-| `SMTP_SENDER_NAME` | `ระบบ CE F.A.I.R.` | ชื่อผู้ส่งอีเมลแจ้งเตือน (มีจุดหลัง R) |
-| `ORG_API_KEY` | *(เก็บใน Script Properties เท่านั้น)* | KKU Gen AI API Key — ตั้งค่าด้วยตนเองผ่าน Apps Script Editor > Project Settings > Script Properties ห้ามใส่ค่าจริงในไฟล์ซอร์สโค้ดหรือเอกสารใด ๆ |
+| `SMTP_SENDER_NAME` | `CE F.A.I.R. (Civil Engineering Flow Access Instant Registration)` | ชื่อผู้ส่งอีเมลแจ้งเตือน (มีจุดหลัง R) |
+| `ORG_API_KEY` | *(เก็บใน Script Properties เท่านั้น)* | KKU IntelSphere API Key — ตั้งค่าด้วยตนเองผ่าน Apps Script Editor > Project Settings > Script Properties ห้ามใส่ค่าจริงในไฟล์ซอร์สโค้ดหรือเอกสารใด ๆ |
 | `ACCESS_DURATION_MONTHS` | `3` | ระยะเวลาเริ่มต้นของสิทธิ์เข้าใช้งาน (เดือน) |
 | `TIMEZONE` | `Asia/Bangkok` | โซนเวลาที่ใช้ประมวลผลวันเวลา |
 | `MAINTENANCE_MODE` | `FALSE` | เปิด/ปิดโหมดปิดปรับปรุงระบบ |
@@ -106,7 +106,7 @@
 
 ## 📂 โครงสร้างไฟล์ในโปรเจกต์
 
-1. **`Code.gs`**: Backend logic, 10 Sheets Database, One-Click Actions, ORG AI integration, Biometric & Date adjustments
+1. **`Code.gs`**: Backend logic, 10 Sheets Database, One-Click Actions, KKU IntelSphere API integration, Biometric & Date adjustments
 2. **`Index.html`**: Web app container (2 main tabs: Request & Dashboard), preloaded user email injection
 3. **`Stylesheet.html`**: Pure CSS สำหรับธีมวิศวกรรมโยธา (Dark Crimson `#661003` & Deep Navy Blue `#183666`) พร้อมสไตล์ Searchable Combobox และ Modal
 4. **`JavaScript.html`**: Vue 3 Frontend, Searchable Advisor Dropdown, Auto-formatters, Review Modal, Signature Pad, 4s Dynamic Loading Text และ reusable components (`StatusBadge`, `RoomCard`, `ModalConfirm`, `TimelineStep`, `LoadingSpinner`)

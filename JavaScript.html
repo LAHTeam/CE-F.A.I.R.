@@ -2,7 +2,7 @@
 /**
  * ==============================================================================
  * JavaScript.html — Vue 3 Single Page Application
- * ระบบ CE F.A.I.R. (Department of Civil Engineering, KKU)
+ * ระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน (CE F.A.I.R.: Civil Engineering Flow Access Instant Registration) — Department of Civil Engineering, KKU
  * ==============================================================================
  */
 
@@ -68,10 +68,10 @@ function formatPhoneNumber(val) {
 // i18n Dictionary
 const i18n = {
   th: {
-    systemName: 'ระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน',
+    systemName: 'ระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน (CE F.A.I.R.: Civil Engineering Flow Access Instant Registration)',
     tabRequest: 'ยื่นคำขอ',
     tabDashboard: 'แดชบอร์ด',
-    footerText: 'สาขาวิชาวิศวกรรมโยธา คณะวิศวกรรมศาสตร์ มหาวิทยาลัยขอนแก่น — ระบบ CE F.A.I.R.',
+    footerText: 'สาขาวิชาวิศวกรรมโยธา คณะวิศวกรรมศาสตร์ มหาวิทยาลัยขอนแก่น — CE F.A.I.R. (Civil Engineering Flow Access Instant Registration)',
 
     // Wizard Steps
     step0: 'ประเภทบุคคล',
@@ -133,7 +133,7 @@ const i18n = {
     emergencyPlaceholder: 'ชื่อ-นามสกุล และเบอร์โทรศัพท์ติดต่อฉุกเฉิน',
     signaturePadTitle: 'ลงลายมือชื่อดิจิทัล (สำหรับหนังสือยินยอมคำขอ)',
     clearSignature: 'ล้างลายเซ็น',
-    consentText: 'ข้าพเจ้ายินยอมให้จัดเก็บและประมวลผลข้อมูลส่วนบุคคลเพื่อการบริหารจัดการระบบและตรวจสอบความปลอดภัยของ ระบบ CE F.A.I.R.',
+    consentText: 'ข้าพเจ้ายินยอมให้จัดเก็บและประมวลผลข้อมูลส่วนบุคคลเพื่อการบริหารจัดการระบบและตรวจสอบความปลอดภัยของ CE F.A.I.R. (Civil Engineering Flow Access Instant Registration)',
 
     // Photo Upload
     photoUploadTitle: 'รูปถ่ายผู้ยื่นคำขอ (หน้าตรง/บัตรประจำตัว)',
@@ -186,7 +186,7 @@ const i18n = {
     noChartData: 'ยังไม่มีข้อมูลสำหรับแสดงกราฟ',
 
     // Approver Review Modal
-    reviewTitle: 'พิจารณาอนุมัติคำขอเข้าใช้ห้องปฏิบัติการ (ระบบ CE F.A.I.R.)',
+    reviewTitle: 'พิจารณาอนุมัติคำขอเข้าใช้ห้องปฏิบัติการ (CE F.A.I.R.: Civil Engineering Flow Access Instant Registration)',
     applicantLabel: 'ผู้ขอ',
     roomLabel: 'ห้อง',
     periodLabel: 'ช่วงเวลาที่ขอ',
@@ -218,7 +218,7 @@ const i18n = {
     systemName: 'After-Hours Civil Engineering Lab Access System',
     tabRequest: 'Request Access',
     tabDashboard: 'Dashboard',
-    footerText: 'Department of Civil Engineering, Faculty of Engineering, Khon Kaen University — ระบบ CE F.A.I.R.',
+    footerText: 'Department of Civil Engineering, Faculty of Engineering, Khon Kaen University — CE F.A.I.R. (Civil Engineering Flow Access Instant Registration)',
 
     // Wizard Steps
     step0: 'Person Type',
@@ -280,7 +280,7 @@ const i18n = {
     emergencyPlaceholder: 'Full name and emergency phone number',
     signaturePadTitle: 'Digital Signature (Application Consent)',
     clearSignature: 'Clear',
-    consentText: 'I consent to the collection and processing of my personal data for system administration and security purposes of ระบบ CE F.A.I.R.',
+    consentText: 'I consent to the collection and processing of my personal data for system administration and security purposes of CE F.A.I.R. (Civil Engineering Flow Access Instant Registration)',
 
     // Photo Upload
     photoUploadTitle: 'Applicant Photo / ID Card',
@@ -333,7 +333,7 @@ const i18n = {
     noChartData: 'No data available for chart display',
 
     // Approver Review Modal
-    reviewTitle: 'Review Room Access Request (ระบบ CE F.A.I.R.)',
+    reviewTitle: 'Review Room Access Request (CE F.A.I.R.: Civil Engineering Flow Access Instant Registration)',
     applicantLabel: 'Applicant',
     roomLabel: 'Room',
     periodLabel: 'Requested Period',
@@ -543,8 +543,8 @@ const RequestView = {
         roomId: '',
         purpose: '',
         startDate: new Date().toISOString().split('T')[0],
-        allowedTimeStart: '16:30',
-        allowedTimeEnd: '20:00',
+        allowedTimeStart: '00:00',
+        allowedTimeEnd: '23:59',
         biometricAppointmentDate: '',
         biometricDate: '',
         biometricTime: '',
