@@ -1,0 +1,11 @@
+# CE F.A.I.R. — push commands (quick reference)
+# ==========================================
+
+# สำรองโค้ดขึ้น GitHub (local=master, remote=main)
+git push origin HEAD:main
+
+# push ขึ้น Google Apps Script (ตาม .claspignore = 6 ไฟล์เว็บแอป)
+clasp push
+
+# fallback: ถ้า `clasp` ไม่อยู่ใน PATH (ใช้ path จริงจาก npm global)
+node "$(npm root -g)/@google/clasp/build/src/index.js" push
