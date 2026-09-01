@@ -68,7 +68,8 @@ function formatPhoneNumber(val) {
 // i18n Dictionary
 const i18n = {
   th: {
-    systemName: 'ระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน (CE F.A.I.R.: Civil Engineering Flow Access Instant Registration)',
+    systemName: 'ระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน',
+    systemNameSub: 'CE F.A.I.R. (Civil Engineering Flow Access Instant Registration)',
     tabRequest: 'ยื่นคำขอ',
     tabDashboard: 'แดชบอร์ด',
     footerText: 'สาขาวิชาวิศวกรรมโยธา คณะวิศวกรรมศาสตร์ มหาวิทยาลัยขอนแก่น — CE F.A.I.R. (Civil Engineering Flow Access Instant Registration)',
@@ -79,7 +80,6 @@ const i18n = {
     step2: 'ห้อง, เวลา และนัดหมาย Biometric',
     step3: 'ผู้อนุมัติขั้นที่ 1',
     step4: 'ผู้ร่วมและติดต่อฉุกเฉิน',
-    step5: 'ลงนามและยืนยัน',
 
     // Person Types
     selectPersonType: 'กรุณาเลือกประเภทบุคคลของผู้ยื่นคำขอ',
@@ -91,6 +91,8 @@ const i18n = {
     externalDesc: 'หน่วยงานร่วมวิจัย/ภายนอก',
     academicStaff: 'สายวิชาการ (อาจารย์)',
     supportStaff: 'สายสนับสนุน',
+    selectStaffType: 'กรุณาเลือกสายงาน',
+    staffTypeLabel: 'สายงาน',
     bachelor: 'ปริญญาตรี',
     master: 'ปริญญาโท',
     doctoral: 'ปริญญาเอก',
@@ -110,6 +112,7 @@ const i18n = {
     email: 'อีเมล (Google Account)',
     phone: 'เบอร์โทรศัพท์',
     studentId: 'รหัสนักศึกษา',
+    degreeLevel: 'ระดับการศึกษา',
     department: 'สาขาวิชา / ภาควิชา',
     faculty: 'คณะ',
     division: 'แผนก',
@@ -127,13 +130,11 @@ const i18n = {
     purpose: 'วัตถุประสงค์การใช้งาน',
     purposePlaceholder: 'ระบุรายละเอียดการใช้งานห้องปฏิบัติการ...',
     advisorSearchPlaceholder: 'พิมพ์เพื่อค้นหาชื่ออาจารย์ หรือแผนก...',
+    advisorLabel: 'อาจารย์ที่ปรึกษา',
     selectAdvisorOption: '-- ค้นหาและเลือกอาจารย์ที่ปรึกษา --',
     participantNames: 'รายชื่อผู้ร่วมใช้งาน (ถ้ามี)',
     emergencyContact: 'ชื่อ และเบอร์โทร. ผู้ติดต่อ กรณีฉุกเฉิน',
     emergencyPlaceholder: 'ชื่อ-นามสกุล และเบอร์โทรศัพท์ติดต่อฉุกเฉิน',
-    signaturePadTitle: 'ลงลายมือชื่อดิจิทัล (สำหรับหนังสือยินยอมคำขอ)',
-    clearSignature: 'ล้างลายเซ็น',
-    consentText: 'ข้าพเจ้ายินยอมให้จัดเก็บและประมวลผลข้อมูลส่วนบุคคลเพื่อการบริหารจัดการระบบและตรวจสอบความปลอดภัยของ CE F.A.I.R. (Civil Engineering Flow Access Instant Registration)',
 
     // Photo Upload
     photoUploadTitle: 'รูปถ่ายผู้ยื่นคำขอ (หน้าตรง/บัตรประจำตัว)',
@@ -206,6 +207,10 @@ const i18n = {
     Available: 'พร้อมใช้งาน',
     Maintenance: 'ปิดปรับปรุง',
 
+    // Validation
+    missingFieldsTitle: 'กรุณากรอกข้อมูลช่องที่ยังไม่ครบถ้วน',
+    biometricBeforeStartError: 'วันที่นัดหมาย Biometric ต้องเท่ากับหรือก่อนวันที่เริ่มต้นใช้งาน',
+
     // Messages
     submitSuccessTitle: 'ส่งคำขอสำเร็จ!',
     loading: 'กำลังประมวลผล...',
@@ -216,6 +221,7 @@ const i18n = {
   },
   en: {
     systemName: 'After-Hours Civil Engineering Lab Access System',
+    systemNameSub: 'CE F.A.I.R. (Civil Engineering Flow Access Instant Registration)',
     tabRequest: 'Request Access',
     tabDashboard: 'Dashboard',
     footerText: 'Department of Civil Engineering, Faculty of Engineering, Khon Kaen University — CE F.A.I.R. (Civil Engineering Flow Access Instant Registration)',
@@ -226,7 +232,6 @@ const i18n = {
     step2: 'Room, Time & Biometrics',
     step3: 'Stage 1 Approver',
     step4: 'Participants & Emergency',
-    step5: 'Sign & Submit',
 
     // Person Types
     selectPersonType: 'Please select applicant person type',
@@ -238,6 +243,8 @@ const i18n = {
     externalDesc: 'External Researchers/Collaborators',
     academicStaff: 'Academic Staff (Faculty)',
     supportStaff: 'Support Staff',
+    selectStaffType: 'Please select staff type',
+    staffTypeLabel: 'Staff Type',
     bachelor: 'Bachelor Degree',
     master: 'Master Degree',
     doctoral: 'Doctoral Degree',
@@ -257,6 +264,7 @@ const i18n = {
     email: 'Email (Google Account)',
     phone: 'Phone Number',
     studentId: 'Student ID',
+    degreeLevel: 'Degree Level',
     department: 'Department / Major',
     faculty: 'Faculty',
     division: 'Division',
@@ -274,13 +282,11 @@ const i18n = {
     purpose: 'Purpose of Access',
     purposePlaceholder: 'Describe details of laboratory usage...',
     advisorSearchPlaceholder: 'Type to search advisor name or division...',
+    advisorLabel: 'Academic Advisor',
     selectAdvisorOption: '-- Search and select advisor --',
     participantNames: 'Participants (if any)',
     emergencyContact: 'Emergency Contact Name and Phone Number',
     emergencyPlaceholder: 'Full name and emergency phone number',
-    signaturePadTitle: 'Digital Signature (Application Consent)',
-    clearSignature: 'Clear',
-    consentText: 'I consent to the collection and processing of my personal data for system administration and security purposes of CE F.A.I.R. (Civil Engineering Flow Access Instant Registration)',
 
     // Photo Upload
     photoUploadTitle: 'Applicant Photo / ID Card',
@@ -353,6 +359,10 @@ const i18n = {
     Available: 'Available',
     Maintenance: 'Maintenance',
 
+    // Validation
+    missingFieldsTitle: 'Please fill in the required fields below',
+    biometricBeforeStartError: 'Biometric appointment date must be on or before the start date',
+
     // Messages
     submitSuccessTitle: 'Submitted Successfully!',
     loading: 'Processing...',
@@ -361,72 +371,6 @@ const i18n = {
     successTitle: 'Success',
     noData: 'No data found'
   }
-};
-
-// ==========================================
-// 1. Signature Pad Component
-// ==========================================
-const SignaturePad = {
-  props: ['t'],
-  emits: ['update:signature'],
-  data() {
-    return { isDrawing: false, ctx: null };
-  },
-  mounted() {
-    this.initCanvas();
-    window.addEventListener('resize', this.initCanvas);
-  },
-  beforeUnmount() {
-    window.removeEventListener('resize', this.initCanvas);
-  },
-  methods: {
-    initCanvas() {
-      const canvas = this.$refs.canvas;
-      if (!canvas) return;
-      this.ctx = canvas.getContext('2d');
-      canvas.width = canvas.offsetWidth || 400;
-      canvas.height = 170;
-      this.ctx.lineWidth = 2.5;
-      this.ctx.lineCap = 'round';
-      this.ctx.strokeStyle = '#183666';
-    },
-    startDrawing(e) {
-      this.isDrawing = true;
-      const pos = this.getPos(e);
-      this.ctx.beginPath();
-      this.ctx.moveTo(pos.x, pos.y);
-    },
-    draw(e) {
-      if (!this.isDrawing) return;
-      e.preventDefault();
-      const pos = this.getPos(e);
-      this.ctx.lineTo(pos.x, pos.y);
-      this.ctx.stroke();
-      this.$emit('update:signature', this.$refs.canvas.toDataURL('image/png'));
-    },
-    stopDrawing() { this.isDrawing = false; },
-    clear() {
-      const canvas = this.$refs.canvas;
-      this.ctx.clearRect(0, 0, canvas.width, canvas.height);
-      this.$emit('update:signature', '');
-    },
-    getPos(e) {
-      const rect = this.$refs.canvas.getBoundingClientRect();
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      return { x: clientX - rect.left, y: clientY - rect.top };
-    }
-  },
-  template: `
-    <div class="sig-canvas-wrap">
-      <canvas
-        ref="canvas" class="sig-canvas"
-        @mousedown="startDrawing" @mousemove="draw" @mouseup="stopDrawing" @mouseleave="stopDrawing"
-        @touchstart.passive="startDrawing" @touchmove.prevent="draw" @touchend="stopDrawing">
-      </canvas>
-      <button type="button" @click="clear" class="sig-clear">{{ t.clearSignature }}</button>
-    </div>
-  `
 };
 
 // ==========================================
@@ -517,7 +461,6 @@ const LoadingSpinner = {
 const RequestView = {
   props: ['lang', 't', 'userEmail'],
   emits: ['loading', 'switch-to-dashboard'],
-  components: { SignaturePad },
   data() {
     return {
       currentStep: 0,
@@ -529,7 +472,7 @@ const RequestView = {
       form: {
         personType: 'Student',
         staffType: '',
-        degreeLevel: 'Bachelor',
+        degreeLevel: '',
         division: 'แผนกวิศวกรรมโครงสร้าง',
         department: 'วิศวกรรมโยธา',
         faculty: 'วิศวกรรมศาสตร์',
@@ -551,9 +494,7 @@ const RequestView = {
         advisorEmail: '',
         participantNames: '',
         emergencyContact: '',
-        signatureData: '',
-        photoData: '',
-        consent: false
+        photoData: ''
       }
     };
   },
@@ -649,50 +590,64 @@ const RequestView = {
       reader.readAsDataURL(file);
     },
     nextStep() {
+      const missing = [];
+      const t = this.t;
+
+      if (this.currentStep === 0) {
+        if (this.form.personType === 'Staff' && !this.form.staffType) missing.push(t.staffTypeLabel);
+        if (this.form.personType === 'Student' && !this.form.degreeLevel) missing.push(t.degreeLevel);
+      }
       if (this.currentStep === 1) {
-        if (!this.form.fullName || !this.form.email || !this.form.phone || !this.form.department) {
-          Swal.fire(this.t.errorTitle, 'กรุณากรอกข้อมูลที่มีเครื่องหมาย * ให้ครบถ้วน', 'warning');
-          return;
-        }
-        if (this.form.personType === 'Student' && !this.form.studentId) {
-          Swal.fire(this.t.errorTitle, 'กรุณากรอกรหัสนักศึกษา', 'warning');
-          return;
-        }
-        if (!this.form.photoData) {
-          Swal.fire(this.t.errorTitle, this.t.photoRequired, 'warning');
-          return;
-        }
+        if (!this.form.photoData) missing.push(t.photoUploadTitle);
+        if (!this.form.email) missing.push(t.email);
+        if (!this.form.fullName) missing.push(t.fullName);
+        if (!this.form.phone) missing.push(t.phone);
+        if (this.form.personType === 'Student' && !this.form.studentId) missing.push(t.studentId);
+        if (!this.form.department) missing.push(t.department);
+        if (this.form.personType === 'External' && !this.form.externalOrg) missing.push(t.externalOrg);
+        if (!this.form.projectTopic) missing.push(t.projectTopic);
       }
       if (this.currentStep === 2) {
-        if (!this.form.roomId || !this.form.startDate || !this.form.biometricDate || !this.form.biometricTime || !this.form.purpose) {
-          Swal.fire(this.t.errorTitle, 'กรุณากรอกข้อมูลห้อง, วันเวลา และนัดหมาย Biometric ให้ครบถ้วน', 'warning');
+        if (!this.form.roomId) missing.push(t.selectRoom);
+        if (!this.form.startDate) missing.push(t.startDate);
+        if (!this.form.allowedTimeStart) missing.push(t.allowedTimeStart);
+        if (!this.form.allowedTimeEnd) missing.push(t.allowedTimeEnd);
+        if (!this.form.biometricDate) missing.push(t.biometricDate);
+        if (!this.form.biometricTime) missing.push(t.biometricTime);
+        if (!this.form.purpose) missing.push(t.purpose);
+
+        if (this.form.startDate && this.form.biometricDate && this.form.biometricDate > this.form.startDate) {
+          Swal.fire(t.errorTitle, t.biometricBeforeStartError, 'warning');
           return;
         }
       }
       if (this.currentStep === 3) {
-        if (this.isCivilStudent && !this.form.advisorEmail) {
-          Swal.fire(this.t.errorTitle, 'กรุณาค้นหาและเลือกอาจารย์ที่ปรึกษา', 'warning');
-          return;
-        }
+        if (this.isCivilStudent && !this.form.advisorEmail) missing.push(t.advisorLabel);
       }
       if (this.currentStep === 4) {
-        if (!this.form.emergencyContact) {
-          Swal.fire(this.t.errorTitle, 'กรุณาระบุชื่อ และเบอร์โทร. ผู้ติดต่อ กรณีฉุกเฉิน', 'warning');
-          return;
-        }
+        if (!this.form.emergencyContact) missing.push(t.emergencyContact);
+      }
+
+      if (missing.length > 0) {
+        this.showMissingFields(missing);
+        return;
       }
       this.currentStep++;
     },
+    showMissingFields(fields) {
+      const items = fields.map(f => '<li>' + f + '</li>').join('');
+      Swal.fire({
+        title: this.t.errorTitle,
+        html:
+          '<div style="text-align:left;font-size:14px;line-height:1.8;">' +
+          '<p style="margin-bottom:6px;font-weight:700;color:#1e293b;">' + this.t.missingFieldsTitle + '</p>' +
+          '<ul style="padding-left:20px;color:#b91c1c;font-weight:600;">' + items + '</ul></div>',
+        icon: 'warning',
+        confirmButtonText: this.t.btnClose
+      });
+    },
     prevStep() { this.currentStep--; },
     async submitForm() {
-      if (!this.form.consent) {
-        Swal.fire(this.t.errorTitle, 'กรุณายินยอมเงื่อนไขก่อนส่งคำขอ', 'warning');
-        return;
-      }
-      if (!this.form.signatureData) {
-        Swal.fire(this.t.errorTitle, 'กรุณาลงลายมือชื่อดิจิทัล', 'warning');
-        return;
-      }
       if (!this.form.photoData) {
         Swal.fire(this.t.errorTitle, this.t.photoRequired, 'warning');
         return;
@@ -734,7 +689,7 @@ const RequestView = {
     <div>
       <!-- Stepper Header -->
       <div class="stepper-wrap">
-        <div v-for="(name, idx) in [t.step0, t.step1, t.step2, t.step3, t.step4, t.step5]" :key="idx" class="step-item">
+        <div v-for="(name, idx) in [t.step0, t.step1, t.step2, t.step3, t.step4]" :key="idx" class="step-item">
           <div :class="['step-bubble', currentStep === idx ? 'active' : (currentStep > idx ? 'done' : '')]">
             {{ idx + 1 }}
           </div>
@@ -772,13 +727,36 @@ const RequestView = {
               </div>
             </div>
 
+            <div v-if="form.personType === 'Staff'" class="form-field" style="margin-top:1rem;">
+              <label class="field-label">{{ t.selectStaffType }} <span class="req">*</span></label>
+              <div class="type-selector type-selector-2">
+                <div :class="['type-card', form.staffType === 'Academic' ? 'active' : '']" @click="form.staffType = 'Academic'">
+                  <div class="type-icon">🎓</div>
+                  <h4 style="font-weight:700;">{{ t.academicStaff }}</h4>
+                </div>
+                <div :class="['type-card', form.staffType === 'Support' ? 'active' : '']" @click="form.staffType = 'Support'">
+                  <div class="type-icon">🛠️</div>
+                  <h4 style="font-weight:700;">{{ t.supportStaff }}</h4>
+                </div>
+              </div>
+            </div>
+
             <div v-if="form.personType === 'Student'" class="form-field" style="margin-top:1rem;">
               <label class="field-label">{{ t.degreeLevel }} <span class="req">*</span></label>
-              <select v-model="form.degreeLevel" class="field-select">
-                <option value="Bachelor">{{ t.bachelor }}</option>
-                <option value="Master">{{ t.master }}</option>
-                <option value="Doctoral">{{ t.doctoral }}</option>
-              </select>
+              <div class="type-selector">
+                <div :class="['type-card', form.degreeLevel === 'Bachelor' ? 'active' : '']" @click="form.degreeLevel = 'Bachelor'">
+                  <div class="type-icon">🎓</div>
+                  <h4 style="font-weight:700;">{{ t.bachelor }}</h4>
+                </div>
+                <div :class="['type-card', form.degreeLevel === 'Master' ? 'active' : '']" @click="form.degreeLevel = 'Master'">
+                  <div class="type-icon">📘</div>
+                  <h4 style="font-weight:700;">{{ t.master }}</h4>
+                </div>
+                <div :class="['type-card', form.degreeLevel === 'Doctoral' ? 'active' : '']" @click="form.degreeLevel = 'Doctoral'">
+                  <div class="type-icon">🔬</div>
+                  <h4 style="font-weight:700;">{{ t.doctoral }}</h4>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -808,11 +786,11 @@ const RequestView = {
               </div>
               <div class="form-field">
                 <label class="field-label">{{ t.phone }} <span class="req">*</span></label>
-                <input type="tel" :value="form.phone" @input="onPhoneInput" placeholder="081-234-5678" maxlength="12" class="field-input" required>
+                <input type="tel" :value="form.phone" @input="onPhoneInput" placeholder="081-234-5678" inputmode="numeric" pattern="[0-9]*" maxlength="12" class="field-input" required>
               </div>
               <div v-if="form.personType === 'Student'" class="form-field">
                 <label class="field-label">{{ t.studentId }} <span class="req">*</span></label>
-                <input type="text" :value="form.studentId" @input="onStudentIdInput" placeholder="643040123-4" maxlength="11" class="field-input" required>
+                <input type="tel" :value="form.studentId" @input="onStudentIdInput" placeholder="643040123-4" inputmode="numeric" pattern="[0-9]*" maxlength="11" class="field-input" required>
               </div>
               <div class="form-field">
                 <label class="field-label">{{ t.department }} <span class="req">*</span></label>
@@ -840,8 +818,8 @@ const RequestView = {
                 <input type="text" v-model="form.externalOrg" class="field-input" required>
               </div>
               <div class="form-field md:col-span-2">
-                <label class="field-label">{{ t.projectTopic }}</label>
-                <input type="text" v-model="form.projectTopic" class="field-input">
+                <label class="field-label">{{ t.projectTopic }} <span class="req">*</span></label>
+                <input type="text" v-model="form.projectTopic" class="field-input" required>
               </div>
             </div>
           </div>
@@ -947,20 +925,6 @@ const RequestView = {
             </div>
           </div>
 
-          <!-- Step 5: Digital Signature & Submit -->
-          <div v-if="currentStep === 5" class="form-grid">
-            <div class="form-field">
-              <label class="field-label">{{ t.signaturePadTitle }} <span class="req">*</span></label>
-              <signature-pad :t="t" @update:signature="form.signatureData = $event"></signature-pad>
-            </div>
-            <div style="margin-top:10px;">
-              <label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:#475569;cursor:pointer;">
-                <input type="checkbox" v-model="form.consent" style="margin-top:3px;">
-                <span>{{ t.consentText }}</span>
-              </label>
-            </div>
-          </div>
-
         </div>
 
         <div class="box-footer">
@@ -969,10 +933,10 @@ const RequestView = {
           </button>
           <div v-else></div>
 
-          <button v-if="currentStep < 5" @click="nextStep" class="ui-btn ui-btn-primary">
+          <button v-if="currentStep < 4" @click="nextStep" class="ui-btn ui-btn-primary">
             {{ t.btnNext }} &rarr;
           </button>
-          <button v-else @click="submitForm" class="ui-btn ui-btn-primary" :disabled="!form.consent || !form.signatureData || !form.photoData">
+          <button v-else @click="submitForm" class="ui-btn ui-btn-primary" :disabled="!form.photoData">
             {{ t.btnSubmit }}
           </button>
         </div>
@@ -1007,17 +971,9 @@ const DashboardView = {
   components: { ReviewModal, StatusBadge, RoomCard, ModalConfirm, TimelineStep, LoadingSpinner },
   async mounted() {
     this.$emit('loading', true);
-    try {
-      const [stats, rooms, closures] = await Promise.all([
-        runGASCached('getDashboardStats', 2),
-        runGASCached('getRoomList', 10),
-        runGASCached('getRoomClosureList', 5)
-      ]);
-      this.stats = stats || {};
-      this.rooms = rooms || [];
-      this.closures = closures || [];
 
-      // Check URL parameters for direct Token Review
+    // [1] เปิด Review Modal จาก token ใน URL ก่อนเสมอ (ไม่ขึ้นกับข้อมูล dashboard)
+    try {
       const urlParams = new URLSearchParams(window.location.search);
       const getParam = (key) => urlParams.get(key) || (window.SERVER_PARAMS && window.SERVER_PARAMS[key]);
       const token = getParam('token');
@@ -1027,7 +983,20 @@ const DashboardView = {
       if (token && (stage || view === 'approver' || view === 'status')) {
         await this.openReviewModal(token, stage || 1, view === 'status');
       }
+    } catch (e) {
+      console.error('Open review modal failed:', e);
+    }
 
+    // [2] โหลดข้อมูล dashboard แยกอิสระ (ถ้าโหลดไม่สำเร็จก็ไม่กระทบ modal)
+    try {
+      const [stats, rooms, closures] = await Promise.all([
+        runGASCached('getDashboardStats', 2).catch(() => ({})),
+        runGASCached('getRoomList', 10).catch(() => []),
+        runGASCached('getRoomClosureList', 5).catch(() => [])
+      ]);
+      this.stats = stats || {};
+      this.rooms = rooms || [];
+      this.closures = closures || [];
       this.$nextTick(() => this.renderAllCharts());
     } catch (e) {
       console.error(e);
@@ -1536,7 +1505,6 @@ app.component('room-card', RoomCard);
 app.component('modal-confirm', ModalConfirm);
 app.component('timeline-step', TimelineStep);
 app.component('loading-spinner', LoadingSpinner);
-app.component('signature-pad', SignaturePad);
 app.component('request-view', RequestView);
 app.component('dashboard-view', DashboardView);
 

@@ -27,7 +27,7 @@ const BRAND_PATTERNS = {
   "MoonshotAI": /^kimi/i
 };
 
-const RANK_KEYWORDS = { "gpt": 4, "sonnet": 5, "max": 4, "large": 3, "pro": 2, "grok": 4.2, "gemini": 4 };
+const RANK_KEYWORDS = { "gpt": 4, "sonnet": 1, "max": 4, "large": 3, "pro": 2, "grok": 4.2, "flash": 8, "gemini": 4 };
 
 function getOrgApiKey() {
   // ห้าม hardcode API Key ในซอร์สโค้ด — ต้องตั้งค่าผ่าน Script Properties เท่านั้น
@@ -110,6 +110,94 @@ function getBestModel() {
   if (!models || models.length === 0) return 'gpt-4o';
   models.sort(function(a, b) { return scoreModel(b) - scoreModel(a); });
   return models[0];
+}
+
+// ==========================================
+// Thai Date/Time Formatting (Buddhist Era) & Shared Helpers
+// ==========================================
+const THAI_MONTHS_FULL = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+const THAI_MONTHS_ABBR = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+const SYSTEM_DISPLAY_NAME = 'ระบบ CE F.A.I.R.';
+
+function parseDateValue(value) {
+  if (value === null || value === undefined || value === '') return null;
+  if (value instanceof Date) return new Date(value.getTime());
+  if (typeof value === 'number') return new Date(value);
+  var s = String(value).trim();
+  if (!s) return null;
+  var iso = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/);
+  if (iso) return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]), Number(iso[4] || 0), Number(iso[5] || 0));
+  var dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{2}):(\d{2}))?/);
+  if (dmy) return new Date(Number(dmy[3]), Number(dmy[2]) - 1, Number(dmy[1]), Number(dmy[4] || 0), Number(dmy[5] || 0));
+  var fallback = new Date(s);
+  return isNaN(fallback.getTime()) ? null : fallback;
+}
+
+function formatThaiDate(value, useAbbr) {
+  var d = parseDateValue(value);
+  if (!d) return value ? String(value) : '';
+  var months = useAbbr ? THAI_MONTHS_ABBR : THAI_MONTHS_FULL;
+  return d.getDate() + ' ' + months[d.getMonth()] + ' ' + (d.getFullYear() + 543);
+}
+
+function formatThaiTime(value) {
+  if (value === null || value === undefined || value === '') return '';
+  var s = String(value).trim();
+  var hh, mm;
+  if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(s)) {
+    var tp = s.split(':');
+    hh = Number(tp[0]); mm = Number(tp[1] || 0);
+  } else {
+    var d = parseDateValue(value);
+    if (d && !isNaN(d.getTime())) {
+      hh = d.getHours(); mm = d.getMinutes();
+    } else {
+      var parts = s.split(':');
+      hh = Number(parts[0]); mm = Number(parts[1] || 0);
+    }
+  }
+  if (isNaN(hh) || isNaN(mm)) return s;
+  return ('0' + hh).slice(-2) + '.' + ('0' + mm).slice(-2) + ' น.';
+}
+
+function formatThaiDateTime(value) {
+  if (value === null || value === undefined || value === '') return '';
+  var datePart = formatThaiDate(value);
+  var timePart = formatThaiTime(value);
+  if (datePart && timePart) return datePart + ' เวลา ' + timePart;
+  return datePart || timePart || String(value);
+}
+
+function escapeHtml(text) {
+  return String(text === null || text === undefined ? '' : text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function findApproverNameByEmail(email) {
+  var cleanEmail = String(email || '').trim().toLowerCase();
+  if (!cleanEmail) return '';
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheets = [
+    { name: 'Advisor', emailCol: 2, nameCol: 1 },
+    { name: 'DivisionStaff', emailCol: 2, nameCol: 1 },
+    { name: 'LabHead', emailCol: 2, nameCol: 1 },
+    { name: 'Admin', emailCol: 2, nameCol: 1 }
+  ];
+  for (var i = 0; i < sheets.length; i++) {
+    var sheet = ss.getSheetByName(sheets[i].name);
+    if (!sheet) continue;
+    var data = sheet.getDataRange().getValues();
+    for (var r = 1; r < data.length; r++) {
+      if (String(data[r][sheets[i].emailCol] || '').trim().toLowerCase() === cleanEmail) {
+        return String(data[r][sheets[i].nameCol] || '').trim();
+      }
+    }
+  }
+  return '';
 }
 
 // ==========================================
@@ -535,11 +623,34 @@ function generateUserId() {
   }
 }
 
+/**
+ * แมปชื่อแผนก (ค่าที่แสดงในฟอร์ม) → เลขรหัสหลักที่ 5 ของ Access Code
+ * แผนกวิศวกรรมโครงสร้าง = 1 และแผนกถัดไปไล่ตามลำดับ 2-7
+ * ต่างสาขา / ต่างคณะ / ไม่มีแผนก = 0
+ */
+function getDivisionCode(division) {
+  var value = String(division || '').trim();
+  var divisionMap = {
+    'แผนกวิศวกรรมโครงสร้าง': 1,
+    'แผนกวิศวกรรมขนส่ง': 2,
+    'แผนกวิศวกรรมการบริหารงานก่อสร้าง': 3,
+    'แผนกวิศวกรรมวัสดุ': 4,
+    'แผนกวิศวกรรมทรัพยากรน้ำ': 5,
+    'แผนกวิศวกรรมปฐพี': 6,
+    'แผนกวิศวกรรมสำรวจ': 7,
+    'ต่างสาขา / ต่างคณะ / ไม่มีแผนก': 0
+  };
+  if (value in divisionMap) return divisionMap[value];
+  var numeric = parseInt(value, 10);
+  if (!isNaN(numeric) && numeric >= 1 && numeric <= 7) return numeric;
+  return 0;
+}
+
 function generateAccessCode(personType, staffType, department, division, degreeLevel) {
   var pType = String(personType || '').trim();
   var sType = String(staffType || '').trim();
   var dLevel = String(degreeLevel || '').trim();
-  var div = Number(division) || 0;
+  var div = getDivisionCode(division);
 
   var digitHundredThousand = 0;
   if (pType === 'Staff') {
@@ -569,12 +680,12 @@ function generateAccessCode(personType, staffType, department, division, degreeL
     if (!lock.hasLock()) throw new Error('ระบบกำลังประมวลผล กรุณาลองใหม่อีกครั้ง');
 
     var currentSeq = Number(getSetting('LAST_ACCESS_CODE_SEQ', 500));
-    if (isNaN(currentSeq) || currentSeq < 500) {
+    if (isNaN(currentSeq) || currentSeq < 1) {
       currentSeq = 500;
     }
     var nextSeq = currentSeq + 1;
     if (nextSeq > 9999) {
-      nextSeq = 501;
+      nextSeq = 1;
     }
 
     updateSetting('LAST_ACCESS_CODE_SEQ', nextSeq);
@@ -594,12 +705,12 @@ function generateAISummary(data) {
   try {
     var apiKey = getOrgApiKey();
     if (!apiKey) {
-      return generateRuleBasedSummary(data);
+      return { summary: generateRuleBasedSummary(data), model: '' };
     }
 
     var selectedModel = getBestModel();
 
-    var systemPrompt = "คุณคือผู้ช่วย AI ช่วยวิเคราะห์ย่อคำขอเข้าใช้ห้องฯ เพื่อให้ผู้อนุมัติ (อาจารย์ที่ปรึกษา / เจ้าหน้าที่ประจำแผนก / หัวหน้าห้องแล็บ / หัวหน้าตึก) ใช้ประกอบการพิจารณาอนุมัติอย่างรอบคอบและรวดเร็ว";
+    var systemPrompt = "คุณคือผู้ช่วย AI ช่วยวิเคราะห์ย่อคำขอเข้าใช้ห้องปฏิบัติการเพื่อให้ผู้อนุมัติ (อาจารย์ที่ปรึกษา / เจ้าหน้าที่ประจำแผนก / หัวหน้าห้องแล็บ / หัวหน้าตึก) ใช้ประกอบการพิจารณาอนุมัติอย่างรอบคอบและรวดเร็ว";
     var userPrompt = "ข้อมูลคำขอ:\n" +
       "- ผู้ขอ: " + (data.fullName || '-') + " (ประเภท: " + (data.personType || '-') + " ระดับ " + (data.degreeLevel || '-') + " สาขา: " + (data.department || '-') + " คณะ: " + (data.faculty || '-') + " แผนก: " + (data.division || '-') + ")\n" +
       "- ห้องที่ขอ: " + (data.roomName || data.roomId || '-') + "\n" +
@@ -611,7 +722,7 @@ function generateAISummary(data) {
       "- เหตุผลความจำเป็น: " + (data.justification || 'ไม่ระบุ') + "\n" +
       "- ผู้ร่วมใช้งาน: " + (data.participantNames || 'ไม่มี') + "\n" +
       "- ผู้ติดต่อฉุกเฉิน: " + (data.emergencyContact || 'ไม่ระบุ') + "\n\n" +
-      "กรุณาตอบเป็นภาษาไทยเฉพาะข้อเสนอแนะ ความเห็น ข้อพึงระวัง เพื่อประกอบการพิจารณา กระชับ ชัดเจน (ไม่เกิน 4-5 บรรทัด):\n";
+      "กรุณาตอบเป็นภาษาไทย กระชับ ชัดเจน ครบถ้วน ไม่เกิน 5 บรรทัด โดยจัดลำดับเป็น: 1. สรุปเนื้องาน 2. ข้อสังเกต/ความเสี่ยง 3. คำแนะนำประกอบการพิจารณา:\n";
 
     var payload = {
       model: selectedModel,
@@ -620,7 +731,7 @@ function generateAISummary(data) {
         { role: 'user', content: userPrompt }
       ],
       temperature: 0.2,
-      max_tokens: 350
+      max_tokens: 500
     };
 
     var options = {
@@ -637,14 +748,12 @@ function generateAISummary(data) {
     var json = JSON.parse(response.getContentText());
 
     if (json && json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content) {
-      var summaryText = json.choices[0].message.content.trim();
-      return summaryText + '\n<small style="color:#64748b;display:block;margin-top:6px;">(วิเคราะห์โดย โมเดล: ' + selectedModel + ')</small>';
-    } else {
-      return generateRuleBasedSummary(data);
+      return { summary: json.choices[0].message.content.trim(), model: selectedModel };
     }
+    return { summary: generateRuleBasedSummary(data), model: '' };
   } catch (err) {
     writeLog('Error', 'generateAISummary', 'OrgAI_API', '', err.toString(), 'Fail');
-    return generateRuleBasedSummary(data);
+    return { summary: generateRuleBasedSummary(data), model: '' };
   }
 }
 
@@ -916,6 +1025,18 @@ function submitRequest(data) {
     if (!data.startDate) throw new Error('กรุณาระบุวันที่เริ่มต้นใช้งาน');
     if (!data.biometricAppointmentDate) throw new Error('กรุณาระบุวันที่และเวลาที่ขอเข้ารับการบันทึก Biometric');
     if (!data.emergencyContact) throw new Error('กรุณาระบุชื่อ และเบอร์โทร. ผู้ติดต่อ กรณีฉุกเฉิน');
+    if (!data.personType) throw new Error('กรุณาเลือกประเภทบุคคล');
+    if (data.personType === 'Staff' && !data.staffType) throw new Error('กรุณาเลือกสายงาน (สายวิชาการ หรือสายสนับสนุน)');
+    if (data.personType === 'Student' && !data.degreeLevel) throw new Error('กรุณาเลือกระดับการศึกษา');
+    if (data.personType === 'Student' && !data.studentId) throw new Error('กรุณาระบุรหัสนักศึกษา');
+    if (data.personType === 'External' && !data.externalOrg) throw new Error('กรุณาระบุชื่อองค์กร / บริษัท');
+    if (!data.projectTopic) throw new Error('กรุณาระบุหัวข้อโครงงาน / วิจัย');
+
+    // วันที่นัดหมาย Biometric ต้องเท่ากับหรือก่อนวันที่เริ่มต้นใช้งาน
+    var _bioDateStr = data.biometricDate || (data.biometricAppointmentDate ? String(data.biometricAppointmentDate).slice(0, 10) : '');
+    if (data.startDate && _bioDateStr && _bioDateStr > data.startDate) {
+      throw new Error('วันที่นัดหมาย Biometric ต้องเท่ากับหรือก่อนวันที่เริ่มต้นใช้งาน');
+    }
 
     var duplicateEndDate = data.endDate ? new Date(data.endDate) : new Date(data.startDate);
     if (!data.endDate) duplicateEndDate.setMonth(duplicateEndDate.getMonth() + Number(getSetting('ACCESS_DURATION_MONTHS', 3)));
@@ -953,9 +1074,16 @@ function submitRequest(data) {
       usersSheet.appendRow(newUserRow);
     } else {
       usersSheet.getRange(existingUserRow, 2).setValue(data.fullName);
+      usersSheet.getRange(existingUserRow, 4).setValue(data.personType);
+      usersSheet.getRange(existingUserRow, 5).setValue(data.staffType || '');
+      usersSheet.getRange(existingUserRow, 6).setValue(data.studentId || '');
       usersSheet.getRange(existingUserRow, 7).setValue(data.phone);
       usersSheet.getRange(existingUserRow, 9).setValue(data.department || '');
+      usersSheet.getRange(existingUserRow, 10).setValue(data.faculty || 'วิศวกรรมศาสตร์');
       usersSheet.getRange(existingUserRow, 11).setValue(data.division || '');
+      usersSheet.getRange(existingUserRow, 12).setValue(data.degreeLevel || '');
+      usersSheet.getRange(existingUserRow, 13).setValue(data.externalOrg || '');
+      usersSheet.getRange(existingUserRow, 14).setValue(data.projectTopic || '');
       usersSheet.getRange(existingUserRow, 16).setValue(accessCode);
       if (photoUrl) usersSheet.getRange(existingUserRow, 17).setValue(photoUrl);
     }
@@ -1072,7 +1200,9 @@ function submitRequest(data) {
     ];
     requestsSheet.appendRow(requestRow);
 
-    var aiSummaryText = generateAISummary(data);
+    var aiResult = generateAISummary(data);
+    var aiSummaryText = aiResult.summary;
+    var aiModel = aiResult.model || 'AI';
 
     // Email to Applicant
     sendNotification('submit_confirmation', {
@@ -1083,12 +1213,13 @@ function submitRequest(data) {
       requestToken: requestToken,
       accessCode: accessCode,
       overallStatus: overallStatus,
-      startDate: Utilities.formatDate(startDate, 'Asia/Bangkok', 'dd/MM/yyyy'),
-      endDate: Utilities.formatDate(endDate, 'Asia/Bangkok', 'dd/MM/yyyy'),
+      startDate: startDate,
+      endDate: endDate,
       allowedTimeStart: data.allowedTimeStart,
       allowedTimeEnd: data.allowedTimeEnd,
       biometricAppointmentDate: data.biometricAppointmentDate,
-      aiSummary: aiSummaryText
+      aiSummary: aiSummaryText,
+      aiModel: aiModel
     });
 
     // Email to Current Approver
@@ -1115,14 +1246,15 @@ function submitRequest(data) {
           department: data.department || '-',
           phone: data.phone,
           roomName: roomName,
-          startDate: Utilities.formatDate(startDate, 'Asia/Bangkok', 'dd/MM/yyyy'),
-          endDate: Utilities.formatDate(endDate, 'Asia/Bangkok', 'dd/MM/yyyy'),
+          startDate: startDate,
+          endDate: endDate,
           allowedTimeStart: data.allowedTimeStart,
           allowedTimeEnd: data.allowedTimeEnd,
           biometricAppointmentDate: data.biometricAppointmentDate,
           purpose: data.purpose,
           token: currentToken,
           aiSummary: aiSummaryText,
+          aiModel: aiModel,
           requestData: data
         });
       }
@@ -1491,6 +1623,12 @@ function sendNotification(type, payload) {
 
     var subject = '';
     var bodyHtml = '';
+    var fmtStartDate = formatThaiDate(payload.startDate);
+    var fmtEndDate = formatThaiDate(payload.endDate);
+    var fmtBioDate = formatThaiDateTime(payload.biometricAppointmentDate);
+    var fmtTimeStart = formatThaiTime(payload.allowedTimeStart);
+    var fmtTimeEnd = formatThaiTime(payload.allowedTimeEnd);
+    var approverName = findApproverNameByEmail(payload.to) || payload.stageName || 'ผู้พิจารณา';
 
     if (type === 'submit_confirmation') {
       subject = '[' + senderName + '] ยืนยันการรับคำขอเข้าใช้ห้องปฏิบัติการ - ' + payload.requestId;
@@ -1499,8 +1637,8 @@ function sendNotification(type, payload) {
       var aiCard = '';
       if (payload.aiSummary) {
         aiCard = '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-left:4px solid #10b981;padding:14px;border-radius:6px;margin:15px 0;">' +
-          '<div style="font-weight:bold;color:#065f46;font-size:13px;margin-bottom:6px;">🤖 บทวิเคราะห์และสรุปย่อจาก AI (CE F.A.I.R.: Civil Engineering Flow Access Instant Registration)</div>' +
-          '<div style="font-size:13px;color:#1e293b;line-height:1.5;">' + payload.aiSummary.replace(/\n/g, '<br>') + '</div>' +
+          '<div style="font-weight:bold;color:#065f46;font-size:13px;margin-bottom:6px;">🤖 บทวิเคราะห์และสรุปย่อจาก ' + escapeHtml(payload.aiModel || 'AI') + '</div>' +
+          '<div style="font-size:13px;color:#1e293b;line-height:1.5;">' + escapeHtml(payload.aiSummary).replace(/\n/g, '<br>') + '</div>' +
           '</div>';
       }
 
@@ -1513,9 +1651,9 @@ function sendNotification(type, payload) {
         '<p>ระบบได้รับคำขอเข้าใช้ห้อง <b>' + payload.roomName + '</b> (เลขที่คำขอ: <b>' + payload.requestId + '</b>) เรียบร้อยแล้ว</p>' +
         '<div style="background:#f8fafc;padding:16px;border-radius:8px;margin:15px 0;border-left:4px solid #183666;font-size:13px;line-height:1.7;">' +
         '<p style="margin:0;"><b>Access Code ประจำคำขอ:</b> <span style="font-size:20px;color:#183666;font-weight:bold;">' + (payload.accessCode || '-') + '</span></p>' +
-        '<p style="margin:0;"><b>ช่วงวันที่ขอใช้งาน:</b> ' + (payload.startDate || '-') + ' ถึง ' + (payload.endDate || '-') + '</p>' +
-        '<p style="margin:0;"><b>เวลาที่ขอใช้งาน:</b> ' + (payload.allowedTimeStart || '-') + ' - ' + (payload.allowedTimeEnd || '-') + '</p>' +
-        '<p style="margin:0;"><b>วัน-เวลาขอเข้ารับการบันทึก Biometric:</b> ' + (payload.biometricAppointmentDate || '-') + '</p>' +
+        '<p style="margin:0;"><b>ช่วงวันที่ขอใช้งาน:</b> ' + (fmtStartDate || '-') + ' ถึง ' + (fmtEndDate || '-') + '</p>' +
+        '<p style="margin:0;"><b>เวลาที่ขอใช้งาน:</b> ' + (fmtTimeStart || '-') + ' - ' + (fmtTimeEnd || '-') + '</p>' +
+        '<p style="margin:0;"><b>วัน-เวลาขอเข้ารับการบันทึก Biometric:</b> ' + (fmtBioDate || '-') + '</p>' +
         '<p style="margin:0;"><b>สถานะปัจจุบัน:</b> <span style="color:#f59e0b;font-weight:bold;">' + payload.overallStatus + '</span></p>' +
         '</div>' +
         aiCard +
@@ -1525,7 +1663,7 @@ function sendNotification(type, payload) {
         '</a>' +
         '</div>' +
         '<hr style="border:none;border-top:1px solid #f1f5f9;margin:20px 0;">' +
-        '<p style="font-size:12px;color:#94a3b8;margin:0;text-align:center;">ส่งโดย ' + senderName + '</p>' +
+        '<p style="font-size:12px;color:#94a3b8;margin:0;text-align:center;">ส่งโดย ' + SYSTEM_DISPLAY_NAME + '</p>' +
         '</div>';
 
     } else if (type === 'approve_request') {
@@ -1544,8 +1682,8 @@ function sendNotification(type, payload) {
       var aiCard = '';
       if (payload.aiSummary) {
         aiCard = '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-left:4px solid #10b981;padding:14px;border-radius:6px;margin:15px 0;">' +
-          '<div style="font-weight:bold;color:#065f46;font-size:13px;margin-bottom:6px;">🤖 บทวิเคราะห์และคำแนะนำจาก AI เพื่อประกอบการพิจารณา</div>' +
-          '<div style="font-size:13px;color:#1e293b;line-height:1.5;">' + payload.aiSummary.replace(/\n/g, '<br>') + '</div>' +
+          '<div style="font-weight:bold;color:#065f46;font-size:13px;margin-bottom:6px;">🤖 บทวิเคราะห์และคำแนะนำจาก ' + escapeHtml(payload.aiModel || 'AI') + '</div>' +
+          '<div style="font-size:13px;color:#1e293b;line-height:1.5;">' + escapeHtml(payload.aiSummary).replace(/\n/g, '<br>') + '</div>' +
           '</div>';
       }
 
@@ -1554,12 +1692,12 @@ function sendNotification(type, payload) {
         '<h2 style="color:#183666;margin:0;font-size:20px;">มีคำขอเข้าใช้ห้องปฏิบัติการนอกเวลารอการพิจารณา</h2>' +
         '<p style="margin:4px 0 0 0;color:#64748b;font-size:13px;">ขั้นตอนที่ ' + payload.stage + ': ' + payload.stageName + '</p>' +
         '</div>' +
-        '<p>เรียน <b>' + payload.stageName + '</b>,</p>' +
-        '<p>มีคำขอยื่นโดย <b>' + payload.applicantName + '</b> (รหัสนักศึกษา: ' + (payload.studentId || '-') + ', ภาค/สาขา: ' + (payload.department || '-') + ', โทร: ' + (payload.phone || '-') + ')</p>' +
+        '<p>เรียน <b>' + escapeHtml(approverName) + '</b>,</p>' +
+        '<p>มีคำขอยื่นโดย <b>' + escapeHtml(payload.applicantName) + '</b> (รหัสนักศึกษา: ' + (payload.studentId || '-') + ', สาขาวิชา: ' + escapeHtml(payload.department || '-') + ', โทร: ' + (payload.phone || '-') + ')</p>' +
         '<div style="background:#f8fafc;padding:14px;border-radius:6px;margin:15px 0;font-size:13px;line-height:1.6;border:1px solid #e2e8f0;">' +
         '<p style="margin:0;"><b>ห้องที่ขอ:</b> ' + payload.roomName + ' (เลขที่คำขอ: <b>' + payload.requestId + '</b>)</p>' +
-        '<p style="margin:0;"><b>ช่วงเวลาที่ขอ:</b> ' + (payload.startDate || '-') + ' ถึง ' + (payload.endDate || '-') + ' (' + (payload.allowedTimeStart || '-') + ' - ' + (payload.allowedTimeEnd || '-') + ')</p>' +
-        '<p style="margin:0;"><b>วัน-เวลาขอรับการบันทึก Biometric:</b> ' + (payload.biometricAppointmentDate || '-') + '</p>' +
+        '<p style="margin:0;"><b>ช่วงเวลาที่ขอ:</b> ' + (fmtStartDate || '-') + ' ถึง ' + (fmtEndDate || '-') + ' (' + (fmtTimeStart || '-') + ' - ' + (fmtTimeEnd || '-') + ')</p>' +
+        '<p style="margin:0;"><b>วัน-เวลาขอรับการบันทึก Biometric:</b> ' + (fmtBioDate || '-') + '</p>' +
         '<p style="margin:0;"><b>วัตถุประสงค์:</b> ' + (payload.purpose || '-') + '</p>' +
         '</div>' +
         aiCard +
@@ -1576,7 +1714,7 @@ function sendNotification(type, payload) {
         '</a>' +
         '</div>' +
         '<hr style="border:none;border-top:1px solid #f1f5f9;margin:20px 0;">' +
-        '<p style="font-size:12px;color:#94a3b8;margin:0;text-align:center;">ส่งโดย ' + senderName + '</p>' +
+        '<p style="font-size:12px;color:#94a3b8;margin:0;text-align:center;">ส่งโดย ' + SYSTEM_DISPLAY_NAME + '</p>' +
         '</div>';
 
     } else if (type === 'reject_notification') {
@@ -1586,10 +1724,10 @@ function sendNotification(type, payload) {
         '<p>เรียนคุณ <b>' + payload.applicantName + '</b>,</p>' +
         '<p>คำขอเลขที่ <b>' + payload.requestId + '</b> (ห้อง: ' + payload.roomName + ') ได้รับการปฏิเสธในขั้นตอนที่ ' + payload.stage + '</p>' +
         '<div style="background:#fef2f2;padding:14px;border-radius:6px;border-left:4px solid #dc2626;margin:18px 0;">' +
-        '<p style="margin:0;font-size:13px;color:#991b1b;"><b>เหตุผล / หมายเหตุ:</b> ' + (payload.note || 'ไม่มีการระบุเหตุผล') + '</p>' +
+        '<p style="margin:0;font-size:13px;color:#991b1b;"><b>เหตุผล / หมายเหตุ:</b> ' + escapeHtml(payload.note || 'ไม่มีการระบุเหตุผล') + '</p>' +
         '</div>' +
         '<hr style="border:none;border-top:1px solid #f1f5f9;margin:20px 0;">' +
-        '<p style="font-size:12px;color:#94a3b8;margin:0;text-align:center;">ส่งโดย ' + senderName + '</p>' +
+        '<p style="font-size:12px;color:#94a3b8;margin:0;text-align:center;">ส่งโดย ' + SYSTEM_DISPLAY_NAME + '</p>' +
         '</div>';
 
     } else if (type === 'status_update') {
@@ -1599,12 +1737,12 @@ function sendNotification(type, payload) {
         '<p>เรียนคุณ <b>' + payload.applicantName + '</b>,</p>' +
         '<p>คำขอเลขที่ <b>' + payload.requestId + '</b> (ห้อง: ' + payload.roomName + ') ได้รับการอนุมัติครบทั้ง 4 ขั้นตอนเรียบร้อยแล้ว</p>' +
         '<div style="background:#ecfdf5;padding:16px;border-radius:6px;border-left:4px solid #10b981;margin:18px 0;font-size:13px;line-height:1.8;">' +
-        '<p style="margin:0;color:#065f46;"><b>📅 ช่วงวันที่ได้รับอนุมัติใช้งาน:</b> ' + (payload.startDate || '-') + ' ถึง ' + (payload.endDate || '-') + '</p>' +
-        '<p style="margin:0;color:#065f46;"><b>🕒 กำหนดวันและเวลานัดหมายมาบันทึก Biometric กับ Admin ที่ตึก:</b> <span style="font-size:15px;font-weight:bold;">' + (payload.biometricAppointmentDate || 'โปรดติดต่อเจ้าหน้าที่') + '</span></p>' +
-        (payload.note ? '<p style="margin:0;color:#065f46;"><b>หมายเหตุจากผู้ดูแล:</b> ' + payload.note + '</p>' : '') +
+        '<p style="margin:0;color:#065f46;"><b>📅 ช่วงวันที่ได้รับอนุมัติใช้งาน:</b> ' + (fmtStartDate || '-') + ' ถึง ' + (fmtEndDate || '-') + '</p>' +
+        '<p style="margin:0;color:#065f46;"><b>🕒 กำหนดวันและเวลานัดหมายมาบันทึก Biometric กับ Admin ที่ตึก:</b> <span style="font-size:15px;font-weight:bold;">' + (fmtBioDate || 'โปรดติดต่อเจ้าหน้าที่') + '</span></p>' +
+        (payload.note ? '<p style="margin:0;color:#065f46;"><b>หมายเหตุจากผู้ดูแล:</b> ' + escapeHtml(payload.note) + '</p>' : '') +
         '</div>' +
         '<hr style="border:none;border-top:1px solid #f1f5f9;margin:20px 0;">' +
-        '<p style="font-size:12px;color:#94a3b8;margin:0;text-align:center;">ส่งโดย ' + senderName + '</p>' +
+        '<p style="font-size:12px;color:#94a3b8;margin:0;text-align:center;">ส่งโดย ' + SYSTEM_DISPLAY_NAME + '</p>' +
         '</div>';
     }
 
@@ -1902,8 +2040,8 @@ function getRoomClosureList() {
         closureId: data[i][0],
         title: data[i][1],
         description: data[i][2],
-        startDate: data[i][3] instanceof Date ? Utilities.formatDate(data[i][3], 'Asia/Bangkok', 'yyyy-MM-dd') : data[i][3],
-        endDate: data[i][4] instanceof Date ? Utilities.formatDate(data[i][4], 'Asia/Bangkok', 'yyyy-MM-dd') : data[i][4],
+        startDate: formatThaiDate(data[i][3]),
+        endDate: formatThaiDate(data[i][4]),
         affectedRoomIds: data[i][5],
         createdBy: data[i][6],
         createdAt: data[i][7],
@@ -1955,8 +2093,8 @@ function collectAllEmailsInSpreadsheet() {
  */
 function formatClosureDate(value) {
   if (!value) return '';
-  if (value instanceof Date) return Utilities.formatDate(value, 'Asia/Bangkok', 'dd/MM/yyyy');
-  return String(value);
+  var formatted = formatThaiDate(value);
+  return formatted || String(value);
 }
 
 /**
@@ -1976,7 +2114,7 @@ function buildClosureEmailHtml(title, description, startDate, endDate, affectedR
     '</div>' +
     '<p style="font-size:13px;color:#475569;">กรุณาวางแผนการใช้งานห้องปฏิบัติการให้สอดคล้องกับช่วงเวลาดังกล่าวด้วย ขออภัยในความไม่สะดวก</p>' +
     '<hr style="border:none;border-top:1px solid #f1f5f9;margin:20px 0;">' +
-    '<p style="font-size:12px;color:#94a3b8;margin:0;text-align:center;">ส่งโดย ' + senderName + '</p>' +
+    '<p style="font-size:12px;color:#94a3b8;margin:0;text-align:center;">ส่งโดย ' + SYSTEM_DISPLAY_NAME + '</p>' +
     '</div>';
 }
 
@@ -2247,10 +2385,14 @@ function getApprovalRequestByToken(token, stage) {
     var row = verified.requestData;
     var currentStage = verified.detectedStage === 'Request' ? row[44] : verified.detectedStage;
 
+    var applicantUser = getUserByEmail(row[4]);
+    var accessCode = (applicantUser && applicantUser.accessCode) ? applicantUser.accessCode : '';
+
     return {
       success: true,
       requestId: row[0],
       timestamp: row[1] instanceof Date ? Utilities.formatDate(row[1], 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') : row[1],
+      timestampDisplay: formatThaiDateTime(row[1]),
       applicantName: row[3],
       applicantEmail: row[4],
       applicantType: row[5],
@@ -2262,22 +2404,27 @@ function getApprovalRequestByToken(token, stage) {
       purpose: row[11],
       startDate: row[12] instanceof Date ? Utilities.formatDate(row[12], 'Asia/Bangkok', 'yyyy-MM-dd') : row[12],
       endDate: row[13] instanceof Date ? Utilities.formatDate(row[13], 'Asia/Bangkok', 'yyyy-MM-dd') : row[13],
+      startDateDisplay: formatThaiDate(row[12]),
+      endDateDisplay: formatThaiDate(row[13]),
       allowedTimeStart: row[14],
       allowedTimeEnd: row[15],
+      allowedTimeStartDisplay: formatThaiTime(row[14]),
+      allowedTimeEndDisplay: formatThaiTime(row[15]),
       participantNames: row[16],
       emergencyContact: row[17],
-      biometricAppointmentDate: row[42] instanceof Date ? Utilities.formatDate(row[42], 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') : row[42],
+      biometricAppointmentDate: row[42] instanceof Date ? Utilities.formatDate(row[42], 'Asia/Bangkok', "yyyy-MM-dd'T'HH:mm") : row[42],
+      biometricAppointmentDateDisplay: formatThaiDateTime(row[42]),
       currentStage: currentStage || row[44],
       overallStatus: row[45],
       signatureData: row[46],
       photoUrl: row[47],
-      accessCode: row[17] || row[16] || '',
+      accessCode: accessCode,
       requestToken: row[48] || row[47] || token,
       stages: [
-        { number: 1, title: 'อาจารย์ที่ปรึกษา (Advisor)', email: row[18], status: row[19], date: row[20] instanceof Date ? Utilities.formatDate(row[20], 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') : row[20], note: row[21] },
-        { number: 2, title: 'เจ้าหน้าที่ประจำแผนก (Division Staff)', email: row[24], status: row[25], date: row[26] instanceof Date ? Utilities.formatDate(row[26], 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') : row[26], note: row[27] },
-        { number: 3, title: 'หัวหน้าห้องปฏิบัติการ (Lab Head)', email: row[30], status: row[31], date: row[32] instanceof Date ? Utilities.formatDate(row[32], 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') : row[32], note: row[33] },
-        { number: 4, title: 'หัวหน้าตึก/ผู้ดูแลระบบ (Building Admin)', email: row[36], status: row[37], date: row[38] instanceof Date ? Utilities.formatDate(row[38], 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') : row[38], note: row[39] }
+        { number: 1, title: 'อาจารย์ที่ปรึกษา (Advisor)', email: row[18], status: row[19], date: row[20] instanceof Date ? Utilities.formatDate(row[20], 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') : row[20], dateDisplay: formatThaiDateTime(row[20]), note: row[21] },
+        { number: 2, title: 'เจ้าหน้าที่ประจำแผนก (Division Staff)', email: row[24], status: row[25], date: row[26] instanceof Date ? Utilities.formatDate(row[26], 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') : row[26], dateDisplay: formatThaiDateTime(row[26]), note: row[27] },
+        { number: 3, title: 'หัวหน้าห้องปฏิบัติการ (Lab Head)', email: row[30], status: row[31], date: row[32] instanceof Date ? Utilities.formatDate(row[32], 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') : row[32], dateDisplay: formatThaiDateTime(row[32]), note: row[33] },
+        { number: 4, title: 'หัวหน้าตึก/ผู้ดูแลระบบ (Building Admin)', email: row[36], status: row[37], date: row[38] instanceof Date ? Utilities.formatDate(row[38], 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') : row[38], dateDisplay: formatThaiDateTime(row[38]), note: row[39] }
       ]
     };
   } catch (err) {

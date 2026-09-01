@@ -76,10 +76,10 @@ const ReviewModal = {
             </div>
             <p><b>เลขที่คำขอ:</b> {{ reviewData.requestId }}</p>
             <p><b>ผู้ขอ:</b> {{ reviewData.applicantName }} ({{ reviewData.applicantEmail }})</p>
-            <p><b>ภาค/สาขา:</b> {{ reviewData.department }} | <b>โทร:</b> {{ reviewData.phone }}</p>
+            <p><b>สาขาวิชา:</b> {{ reviewData.department }} | <b>โทร:</b> {{ reviewData.phone }}</p>
             <p><b>ห้องที่ขอ:</b> {{ reviewData.roomName }} ({{ reviewData.roomId }})</p>
-            <p><b>ช่วงเวลาที่ขอ:</b> {{ reviewData.startDate }} ถึง {{ reviewData.endDate }} ({{ reviewData.allowedTimeStart }} - {{ reviewData.allowedTimeEnd }})</p>
-            <p><b>วัน-เวลาขอรับการบันทึก Biometric:</b> {{ reviewData.biometricAppointmentDate }}</p>
+            <p><b>ช่วงเวลาที่ขอ:</b> {{ reviewData.startDateDisplay }} ถึง {{ reviewData.endDateDisplay }} ({{ reviewData.allowedTimeStartDisplay }} - {{ reviewData.allowedTimeEndDisplay }})</p>
+            <p><b>วัน-เวลาขอรับการบันทึก Biometric:</b> {{ reviewData.biometricAppointmentDateDisplay }}</p>
             <p><b>วัตถุประสงค์:</b> {{ reviewData.purpose }}</p>
             <p><b>ชื่อและเบอร์โทร. ผู้ติดต่อ กรณีฉุกเฉิน:</b> {{ reviewData.emergencyContact }}</p>
             <p v-if="reviewData.accessCode"><b>Access Code:</b> <span style="font-size:16px;font-weight:bold;color:#183666;">{{ reviewData.accessCode }}</span></p>
@@ -93,7 +93,7 @@ const ReviewModal = {
               <timeline-step v-for="s in stageList" :key="s.number"
                              :number="s.number" :title="s.title"
                              :status="s.status || 'Pending'"
-                             :note="(s.date ? s.date : '') + (s.note ? ' · ' + s.note : '')">
+                             :note="((s.dateDisplay || s.date) ? (s.dateDisplay || s.date) : '') + (s.note ? ' · ' + s.note : '')">
               </timeline-step>
             </div>
           </div>
