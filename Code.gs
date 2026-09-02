@@ -225,7 +225,7 @@ function doGet(e) {
           // Stage 4 requires reviewing and confirming biometric appointment date in Web UI
           var template = HtmlService.createTemplateFromFile('Index');
           template.preloadedUserEmail = getCurrentUserEmail();
-          template.serverParamsJson = JSON.stringify(params);
+          template.serverParamsJson = JSON.stringify(params).replace(/</g, '\\u003c');
           return template.evaluate()
             .setTitle('ระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน (CE F.A.I.R.: Civil Engineering Flow Access Instant Registration)')
             .addMetaTag('viewport', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no')
@@ -245,7 +245,7 @@ function doGet(e) {
 
   var template = HtmlService.createTemplateFromFile('Index');
   template.preloadedUserEmail = getCurrentUserEmail();
-  template.serverParamsJson = JSON.stringify(params);
+  template.serverParamsJson = JSON.stringify(params).replace(/</g, '\\u003c');
 
   return template.evaluate()
     .setTitle('ระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน (CE F.A.I.R.: Civil Engineering Flow Access Instant Registration)')
@@ -268,7 +268,7 @@ function renderActionResponseHtml(title, message, color, icon) {
     '<div class="icon">' + icon + '</div>' +
     '<h2>' + title + '</h2>' +
     '<p>' + message + '</p>' +
-    '<a href="' + webAppUrl + '#dashboard" class="btn">📊 ไปที่หน้าแดชบอร์ด</a>' +
+    '<a href="' + webAppUrl + '#dashboard" target="_top" class="btn">📊 ไปที่หน้าแดชบอร์ด</a>' +
     '</div></body></html>';
   return HtmlService.createHtmlOutput(html).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -710,19 +710,19 @@ function generateAISummary(data) {
 
     var selectedModel = getBestModel();
 
-    var systemPrompt = "คุณคือผู้ช่วย AI ช่วยวิเคราะห์ย่อคำขอเข้าใช้ห้องปฏิบัติการเพื่อให้ผู้อนุมัติ (อาจารย์ที่ปรึกษา / เจ้าหน้าที่ประจำแผนก / หัวหน้าห้องแล็บ / หัวหน้าตึก) ใช้ประกอบการพิจารณาอนุมัติอย่างรอบคอบและรวดเร็ว";
+    var systemPrompt = "คุณคือผู้ช่วย AI ที่สรุปคำขอเข้าใช้ห้องปฏิบัติการเป็นภาษาไทย ตอบเป็นข้อความล้วนสั้นกระชับ ห้ามใช้ markdown อีโมจิ หรือสัญลักษณ์พิเศษ";
     var userPrompt = "ข้อมูลคำขอ:\n" +
-      "- ผู้ขอ: " + (data.fullName || '-') + " (ประเภท: " + (data.personType || '-') + " ระดับ " + (data.degreeLevel || '-') + " สาขา: " + (data.department || '-') + " คณะ: " + (data.faculty || '-') + " แผนก: " + (data.division || '-') + ")\n" +
-      "- ห้องที่ขอ: " + (data.roomName || data.roomId || '-') + "\n" +
-      "- วันที่ขอใช้งาน: " + (data.startDate || '-') + " ถึง " + (data.endDate || '-') + "\n" +
-      "- เวลาขอใช้งาน: " + (data.allowedTimeStart || '-') + " ถึง " + (data.allowedTimeEnd || '-') + "\n" +
-      "- วันที่และเวลานัดหมายบันทึก Biometric: " + (data.biometricAppointmentDate || 'ไม่ระบุ') + "\n" +
-      "- หัวข้อโครงงาน/วิจัย: " + (data.projectTopic || 'ไม่ระบุ') + "\n" +
-      "- วัตถุประสงค์: " + (data.purpose || 'ไม่ระบุ') + "\n" +
-      "- เหตุผลความจำเป็น: " + (data.justification || 'ไม่ระบุ') + "\n" +
-      "- ผู้ร่วมใช้งาน: " + (data.participantNames || 'ไม่มี') + "\n" +
-      "- ผู้ติดต่อฉุกเฉิน: " + (data.emergencyContact || 'ไม่ระบุ') + "\n\n" +
-      "กรุณาตอบเป็นภาษาไทย กระชับ ชัดเจน ครบถ้วน ไม่เกิน 5 บรรทัด โดยจัดลำดับเป็น: 1. สรุปเนื้องาน 2. ข้อสังเกต/ความเสี่ยง 3. คำแนะนำประกอบการพิจารณา:\n";
+      "ผู้ขอ: " + (data.fullName || '-') + " (ประเภท: " + (data.personType || '-') + " ระดับ " + (data.degreeLevel || '-') + " สาขา: " + (data.department || '-') + " คณะ: " + (data.faculty || '-') + " แผนก: " + (data.division || '-') + ")\n" +
+      "ห้องที่ขอ: " + (data.roomName || data.roomId || '-') + "\n" +
+      "วันที่ขอใช้งาน: " + (data.startDate || '-') + " ถึง " + (data.endDate || 'ไม่ระบุ') + "\n" +
+      "เวลาขอใช้งาน: " + (data.allowedTimeStart || '-') + " ถึง " + (data.allowedTimeEnd || '-') + "\n" +
+      "วันที่และเวลานัดหมายบันทึก Biometric: " + (data.biometricAppointmentDate || 'ไม่ระบุ') + "\n" +
+      "หัวข้อโครงงาน/วิจัย: " + (data.projectTopic || 'ไม่ระบุ') + "\n" +
+      "วัตถุประสงค์: " + (data.purpose || 'ไม่ระบุ') + "\n" +
+      "เหตุผลความจำเป็น: " + (data.justification || 'ไม่ระบุ') + "\n" +
+      "ผู้ร่วมใช้งาน: " + (data.participantNames || 'ไม่มี') + "\n" +
+      "ผู้ติดต่อฉุกเฉิน: " + (data.emergencyContact || 'ไม่ระบุ') + "\n\n" +
+      "ตอบเป็นข้อความล้วน ไม่เกิน 3 บรรทัด เรียงเป็น 1. สรุปเนื้องาน 2. ข้อสังเกต 3. คำแนะนำ โดยไม่ใช้อีโมจิหรือสัญลักษณ์:";
 
     var payload = {
       model: selectedModel,
@@ -748,7 +748,7 @@ function generateAISummary(data) {
     var json = JSON.parse(response.getContentText());
 
     if (json && json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content) {
-      return { summary: json.choices[0].message.content.trim(), model: selectedModel };
+      return { summary: sanitizeAIOutput(json.choices[0].message.content), model: selectedModel };
     }
     return { summary: generateRuleBasedSummary(data), model: '' };
   } catch (err) {
@@ -757,14 +757,26 @@ function generateAISummary(data) {
   }
 }
 
-function generateRuleBasedSummary(data) {
-  var topic = data.projectTopic ? 'โครงงาน "' + data.projectTopic + '"' : 'การปฏิบัติงานตามวัตถุประสงค์';
-  var timeNotice = (data.allowedTimeEnd && data.allowedTimeEnd > '20:00') ? '⚠️ มีการใช้งานหลัง 20:00 น. ควรเน้นย้ำความปลอดภัยในการปิดห้อง' : '✅ ช่วงเวลาใช้งานอยู่ในเกณฑ์ปกติ';
-  var bioNotice = data.biometricAppointmentDate ? '📅 ขอนัดหมายบันทึก Biometric: ' + data.biometricAppointmentDate : '⚠️ ยังไม่ได้ระบุวันนัดหมาย Biometric';
+// ล้าง markdown/อีโมจิ/สัญลักษณ์พิเศษ ออกจากคำตอบของ AI ก่อนนำไปแสดงในอีเมล
+function sanitizeAIOutput(text) {
+  if (!text) return '';
+  var clean = String(text)
+    .replace(/(\*\*|__)/g, '')
+    .replace(/[#*_`~]/g, '')
+    .replace(/[\u2600-\u27BF\u{1F300}-\u{1FAFF}]/gu, '')
+    .replace(/  +/g, ' ')
+    .trim();
+  return clean.substring(0, 600);
+}
 
-  return "🎯 <b>สรุปเนื้องาน:</b> ขอเข้าใช้ห้อง " + (data.roomName || data.roomId) + " เพื่อ " + topic + " (" + (data.purpose || 'ไม่มีรายละเอียด') + ")\n" +
-    "⚠️ <b>ข้อสังเกต:</b> " + timeNotice + " (เวลา " + (data.allowedTimeStart || '-') + " - " + (data.allowedTimeEnd || '-') + ") | " + bioNotice + "\n" +
-    "💡 <b>ความเห็น AI:</b> ข้อมูลและวัตถุประสงค์ชัดเจน มีผู้ติดต่อฉุกเฉินครบถ้วน เหมาะสมแก่การพิจารณา";
+function generateRuleBasedSummary(data) {
+  var topic = data.projectTopic ? 'โครงงาน ' + data.projectTopic : 'การปฏิบัติงานตามวัตถุประสงค์';
+  var timeNotice = (data.allowedTimeEnd && String(data.allowedTimeEnd) > '20:00') ? 'มีการใช้งานหลัง 20:00 น. ควรเน้นย้ำความปลอดภัยในการปิดห้อง' : 'ช่วงเวลาใช้งานอยู่ในเกณฑ์ปกติ';
+  var bioNotice = data.biometricAppointmentDate ? 'ขอนัดหมายบันทึก Biometric: ' + data.biometricAppointmentDate : 'ยังไม่ได้ระบุวันนัดหมาย Biometric';
+
+  return '1. สรุปเนื้องาน: ขอเข้าใช้ห้อง ' + (data.roomName || data.roomId) + ' เพื่อ ' + topic + ' (' + (data.purpose || 'ไม่มีรายละเอียด') + ')\n' +
+    '2. ข้อสังเกต: ' + timeNotice + ' (เวลา ' + (data.allowedTimeStart || '-') + ' - ' + (data.allowedTimeEnd || '-') + ') ' + bioNotice + '\n' +
+    '3. คำแนะนำ: ข้อมูลและวัตถุประสงค์ชัดเจน มีผู้ติดต่อฉุกเฉินครบถ้วน เหมาะสมแก่การพิจารณา';
 }
 
 // ==============================================================================
@@ -2381,55 +2393,95 @@ function getRequestByTokenOrSearch(query) {
 
 function getApprovalRequestByToken(token, stage) {
   try {
-    var verified = verifyToken(token, stage ? Number(stage) : null);
-    var row = verified.requestData;
-    var currentStage = verified.detectedStage === 'Request' ? row[44] : verified.detectedStage;
-
-    var applicantUser = getUserByEmail(row[4]);
-    var accessCode = (applicantUser && applicantUser.accessCode) ? applicantUser.accessCode : '';
-
-    return {
-      success: true,
-      requestId: row[0],
-      timestamp: row[1] instanceof Date ? Utilities.formatDate(row[1], 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') : row[1],
-      timestampDisplay: formatThaiDateTime(row[1]),
-      applicantName: row[3],
-      applicantEmail: row[4],
-      applicantType: row[5],
-      submittedByRole: row[6],
-      department: row[7],
-      phone: row[8],
-      roomId: row[9],
-      roomName: row[10],
-      purpose: row[11],
-      startDate: row[12] instanceof Date ? Utilities.formatDate(row[12], 'Asia/Bangkok', 'yyyy-MM-dd') : row[12],
-      endDate: row[13] instanceof Date ? Utilities.formatDate(row[13], 'Asia/Bangkok', 'yyyy-MM-dd') : row[13],
-      startDateDisplay: formatThaiDate(row[12]),
-      endDateDisplay: formatThaiDate(row[13]),
-      allowedTimeStart: row[14],
-      allowedTimeEnd: row[15],
-      allowedTimeStartDisplay: formatThaiTime(row[14]),
-      allowedTimeEndDisplay: formatThaiTime(row[15]),
-      participantNames: row[16],
-      emergencyContact: row[17],
-      biometricAppointmentDate: row[42] instanceof Date ? Utilities.formatDate(row[42], 'Asia/Bangkok', "yyyy-MM-dd'T'HH:mm") : row[42],
-      biometricAppointmentDateDisplay: formatThaiDateTime(row[42]),
-      currentStage: currentStage || row[44],
-      overallStatus: row[45],
-      signatureData: row[46],
-      photoUrl: row[47],
-      accessCode: accessCode,
-      requestToken: row[48] || row[47] || token,
-      stages: [
-        { number: 1, title: 'อาจารย์ที่ปรึกษา (Advisor)', email: row[18], status: row[19], date: row[20] instanceof Date ? Utilities.formatDate(row[20], 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') : row[20], dateDisplay: formatThaiDateTime(row[20]), note: row[21] },
-        { number: 2, title: 'เจ้าหน้าที่ประจำแผนก (Division Staff)', email: row[24], status: row[25], date: row[26] instanceof Date ? Utilities.formatDate(row[26], 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') : row[26], dateDisplay: formatThaiDateTime(row[26]), note: row[27] },
-        { number: 3, title: 'หัวหน้าห้องปฏิบัติการ (Lab Head)', email: row[30], status: row[31], date: row[32] instanceof Date ? Utilities.formatDate(row[32], 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') : row[32], dateDisplay: formatThaiDateTime(row[32]), note: row[33] },
-        { number: 4, title: 'หัวหน้าตึก/ผู้ดูแลระบบ (Building Admin)', email: row[36], status: row[37], date: row[38] instanceof Date ? Utilities.formatDate(row[38], 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') : row[38], dateDisplay: formatThaiDateTime(row[38]), note: row[39] }
-      ]
-    };
+    var cleanToken = String(token || '').trim();
+    try {
+      var verified = verifyToken(cleanToken, stage ? Number(stage) : null);
+      var currentStage = verified.detectedStage === 'Request' ? verified.requestData[44] : verified.detectedStage;
+      return buildReviewPayload(verified.requestData, currentStage);
+    } catch (strictErr) {
+      // Fallback แบบ read-only: เปิดดูรายละเอียดได้แม้ Token ถูกใช้ไปแล้ว (อนุมัติ/ปฏิเสธ) โดยไม่นับความผิด
+      var viewRow = findRequestRowByTokenForView(cleanToken);
+      if (!viewRow) throw strictErr;
+      var payload = buildReviewPayload(viewRow, null);
+      payload.readOnlyView = true;
+      return payload;
+    }
   } catch (err) {
     return { success: false, message: err.message };
   }
+}
+
+// สแกน Token ทุกขั้นและ RequestToken เพื่อแสดงผล read-only โดยตรวจสิทธิ์แต่ไม่เขียนค่า failure
+function findRequestRowByTokenForView(cleanToken) {
+  if (!cleanToken) return null;
+  var actorEmail = requireAuthenticatedUser();
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
+  if (!sheet) return null;
+  var map = getHeaderMap(sheet);
+  var data = sheet.getDataRange().getValues();
+  var isAdmin = verifyUserRole(actorEmail, 'Admin');
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    var matchedApprover = '';
+    for (var s = 1; s <= 4; s++) {
+      var tokenCol = map['Stage' + s + '_Token'];
+      if (tokenCol && String(row[tokenCol - 1] || '').trim() === cleanToken) {
+        matchedApprover = String(row[map['Stage' + s + '_ApproverEmail'] - 1] || '').trim().toLowerCase();
+        break;
+      }
+    }
+    var isRequestToken = map.RequestToken && String(row[map.RequestToken - 1] || '').trim() === cleanToken;
+    if (!matchedApprover && !isRequestToken) continue;
+    var applicantEmail = String(row[map.ApplicantEmail - 1] || '').trim().toLowerCase();
+    if (isRequestToken ? (!isAdmin && actorEmail !== applicantEmail) : (!isAdmin && actorEmail !== matchedApprover)) continue;
+    return row;
+  }
+  return null;
+}
+
+function buildReviewPayload(row, currentStage) {
+  var applicantUser = getUserByEmail(row[4]);
+  var accessCode = (applicantUser && applicantUser.accessCode) ? applicantUser.accessCode : '';
+
+  return {
+    success: true,
+    requestId: row[0],
+    timestamp: row[1] instanceof Date ? Utilities.formatDate(row[1], 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') : row[1],
+    timestampDisplay: formatThaiDateTime(row[1]),
+    applicantName: row[3],
+    applicantEmail: row[4],
+    applicantType: row[5],
+    submittedByRole: row[6],
+    department: row[7],
+    phone: row[8],
+    roomId: row[9],
+    roomName: row[10],
+    purpose: row[11],
+    startDate: row[12] instanceof Date ? Utilities.formatDate(row[12], 'Asia/Bangkok', 'yyyy-MM-dd') : row[12],
+    endDate: row[13] instanceof Date ? Utilities.formatDate(row[13], 'Asia/Bangkok', 'yyyy-MM-dd') : row[13],
+    startDateDisplay: formatThaiDate(row[12]),
+    endDateDisplay: formatThaiDate(row[13]),
+    allowedTimeStart: row[14],
+    allowedTimeEnd: row[15],
+    allowedTimeStartDisplay: formatThaiTime(row[14]),
+    allowedTimeEndDisplay: formatThaiTime(row[15]),
+    participantNames: row[16],
+    emergencyContact: row[17],
+    biometricAppointmentDate: row[42] instanceof Date ? Utilities.formatDate(row[42], 'Asia/Bangkok', "yyyy-MM-dd'T'HH:mm") : row[42],
+    biometricAppointmentDateDisplay: formatThaiDateTime(row[42]),
+    currentStage: currentStage || row[44],
+    overallStatus: row[45],
+    signatureData: row[46],
+    photoUrl: row[47],
+    accessCode: accessCode,
+    requestToken: row[48] || row[47] || '',
+    stages: [
+      { number: 1, title: 'อาจารย์ที่ปรึกษา (Advisor)', email: row[18], status: row[19], date: row[20] instanceof Date ? Utilities.formatDate(row[20], 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') : row[20], dateDisplay: formatThaiDateTime(row[20]), note: row[21] },
+      { number: 2, title: 'เจ้าหน้าที่ประจำแผนก (Division Staff)', email: row[24], status: row[25], date: row[26] instanceof Date ? Utilities.formatDate(row[26], 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') : row[26], dateDisplay: formatThaiDateTime(row[26]), note: row[27] },
+      { number: 3, title: 'หัวหน้าห้องปฏิบัติการ (Lab Head)', email: row[30], status: row[31], date: row[32] instanceof Date ? Utilities.formatDate(row[32], 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') : row[32], dateDisplay: formatThaiDateTime(row[32]), note: row[33] },
+      { number: 4, title: 'หัวหน้าตึก/ผู้ดูแลระบบ (Building Admin)', email: row[36], status: row[37], date: row[38] instanceof Date ? Utilities.formatDate(row[38], 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') : row[38], dateDisplay: formatThaiDateTime(row[38]), note: row[39] }
+    ]
+  };
 }
 
 // ==============================================================================

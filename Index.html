@@ -98,7 +98,7 @@ CE F.A.I.R. (Civil Engineering Flow Access Instant Registration)</title>
 
     <!-- ==================== Global Loading Overlay ==================== -->
     <div v-if="loading" class="loading-layer">
-      <loading-spinner :text="isLongLoading ? t.loadingLong : t.loading"></loading-spinner>
+      <loading-spinner :text="loadingText"></loading-spinner>
     </div>
 
   </div>
@@ -115,8 +115,10 @@ CE F.A.I.R. (Civil Engineering Flow Access Instant Registration)</title>
   <!-- Inject Preloaded User Email for 0ms Fast Auto-fill -->
   <script>
     window.PRELOADED_USER_EMAIL = "<?= preloadedUserEmail || '' ?>";
-    window.SERVER_PARAMS = <?= serverParamsJson || '{}' ?>;
+    try { window.SERVER_PARAMS = JSON.parse(document.getElementById('server-params-json').textContent); }
+    catch (e) { window.SERVER_PARAMS = {}; }
   </script>
+  <script id="server-params-json" type="application/json"><?= serverParamsJson || '{}' ?></script>
 
   <!-- Main JavaScript App (ReviewModal must be included first) -->
   <?!= include('ReviewModal'); ?>

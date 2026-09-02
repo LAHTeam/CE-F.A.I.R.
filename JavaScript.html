@@ -1152,6 +1152,7 @@ const DashboardView = {
       try {
         const res = await runGAS('getApprovalRequestByToken', token, this.isReadOnly ? null : this.reviewStage);
         if (res.success) {
+          this.isReadOnly = isReadOnly || !!res.readOnlyView;
           this.reviewData = res;
           this.adminStartDate = res.startDate || '';
           this.adminBiometricDate = res.biometricAppointmentDate || '';
@@ -1453,12 +1454,21 @@ const app = createApp({
       userRole: 'Applicant',
       loading: false,
       loadingTimer: null,
-      isLongLoading: false
+      loadingMsgIdx: 0
     };
   },
   computed: {
     t() { return i18n[this.currentLang] || i18n.th; },
-    currentYear() { return new Date().getFullYear(); }
+    currentYear() { return new Date().getFullYear(); },
+    loadingMessages() {
+      return this.currentLang === 'en'
+        ? [this.t.loading, this.t.loadingLong, 'Creating request...', 'Verifying data...', 'Connecting to server...']
+        : [this.t.loading, this.t.loadingLong, 'สร้างคำขอ...', 'กำลังตรวจสอบข้อมูล...', 'กำลังเชื่อมต่อเซิร์ฟเวอร์...'];
+    },
+    loadingText() {
+      const msgs = this.loadingMessages;
+      return msgs[this.loadingMsgIdx % msgs.length];
+    }
   },
   async mounted() {
     if (!this.userEmail) {
@@ -1485,15 +1495,14 @@ const app = createApp({
     },
     setLoading(val) {
       this.loading = !!val;
+      if (this.loadingTimer) { clearInterval(this.loadingTimer); this.loadingTimer = null; }
       if (this.loading) {
-        this.isLongLoading = false;
-        if (this.loadingTimer) clearTimeout(this.loadingTimer);
-        this.loadingTimer = setTimeout(() => {
-          if (this.loading) this.isLongLoading = true;
-        }, 4000);
+        this.loadingMsgIdx = 0;
+        this.loadingTimer = setInterval(() => {
+          this.loadingMsgIdx = (this.loadingMsgIdx + 1) % this.loadingMessages.length;
+        }, 2500);
       } else {
-        if (this.loadingTimer) clearTimeout(this.loadingTimer);
-        this.isLongLoading = false;
+        this.loadingMsgIdx = 0;
       }
     }
   }
