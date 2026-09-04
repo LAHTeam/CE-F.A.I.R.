@@ -7,7 +7,8 @@ const ReviewModal = {
     t:           { type: Object,  required: true },
     reviewData:  { type: Object,  required: true },
     reviewStage: { type: Number,  required: true },
-    readOnly:    { type: Boolean, default: false }
+    readOnly:    { type: Boolean, default: false },
+    fullPage:    { type: Boolean, default: false }
   },
   data() {
     return {
@@ -62,8 +63,8 @@ const ReviewModal = {
     }
   },
   template: `
-    <div class="modal-overlay" @click.self="close">
-      <div class="modal-content">
+    <div :class="fullPage ? 'detail-page' : 'modal-overlay'" @click.self="close">
+      <div :class="fullPage ? 'detail-page-content' : 'modal-content'">
         <div class="modal-header">
           <h3 v-if="readOnly">รายละเอียดและสถานะคำขอ</h3>
           <h3 v-else>{{ t.reviewTitle }} (Stage {{ reviewStage }})</h3>

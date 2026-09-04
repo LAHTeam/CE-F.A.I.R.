@@ -10,6 +10,7 @@ CE F.A.I.R. (Civil Engineering Flow Access Instant Registration)</title>
   <!-- Preconnect & Fonts -->  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="preconnect" href="https://unpkg.com" crossorigin>
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
@@ -29,7 +30,7 @@ CE F.A.I.R. (Civil Engineering Flow Access Instant Registration)</title>
       <div class="nav-container">
 
         <!-- Logo & Title -->
-        <div class="brand-section" @click="currentTab = 'request'">
+        <div class="brand-section" @click="currentTab !== 'token' && (currentTab = 'request')">
           <div class="brand-icon">
             <svg style="width:20px;height:20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round"
@@ -47,14 +48,14 @@ CE F.A.I.R. (Civil Engineering Flow Access Instant Registration)</title>
           <!-- 2 Main Tabs: Request & Dashboard -->
           <div class="nav-tabs">
             <button
-              @click="currentTab = 'request'"
+              @click="currentTab !== 'token' && (currentTab = 'request')"
               :class="['nav-tab-btn', currentTab === 'request' ? 'active' : '']">
               <span>📝</span>
               <span>{{ t.tabRequest }}</span>
             </button>
 
             <button
-              @click="currentTab = 'dashboard'"
+              @click="currentTab !== 'token' && (currentTab = 'dashboard')"
               :class="['nav-tab-btn', currentTab === 'dashboard' ? 'active' : '']">
               <span>📊</span>
               <span>{{ t.tabDashboard }}</span>
@@ -89,6 +90,14 @@ CE F.A.I.R. (Civil Engineering Flow Access Instant Registration)</title>
         @loading="setLoading">
       </dashboard-view>
 
+      <!-- 3. Token-based status/detail page -->
+      <token-view
+        v-if="currentTab === 'token'"
+        :lang="currentLang" :t="t" :user-email="userEmail" :user-role="userRole"
+        @loading="setLoading"
+        @close="currentTab = 'dashboard'">
+      </token-view>
+
     </main>
 
     <!-- ==================== Footer ==================== -->
@@ -108,17 +117,36 @@ CE F.A.I.R. (Civil Engineering Flow Access Instant Registration)</title>
   <!-- Chatbot widget is enabled only when its provider configuration is injected securely. -->
 
   <!-- Vue 3, SweetAlert2, Chart.js -->
-  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4" defer></script>
 
-  <!-- Inject Preloaded User Email for 0ms Fast Auto-fill -->
+  <!-- Inject Preloaded User Email + server params for 0ms Fast Auto-fill -->
   <script>
     window.PRELOADED_USER_EMAIL = "<?= preloadedUserEmail || '' ?>";
-    try { window.SERVER_PARAMS = JSON.parse(document.getElementById('server-params-json').textContent); }
-    catch (e) { window.SERVER_PARAMS = {}; }
+    window.SERVER_PARAMS = <?!= serverParamsJson || '{}' ?>;
+    window.AUTH_INFO = <?!= authJson || '{"needsAuth":false,"url":""}' ?>;
+    (function () {
+      var auth = window.AUTH_INFO || {};
+      if (auth.needsAuth && auth.url) {
+        // ยังไม่ได้ login/ยินยอม scopes → บังคับ redirect ไปหน้า consent ก่อน
+        // กันไม่ให้ google.script.run คืน null (success handler ได้ null แทน error object)
+        try { sessionStorage.setItem('ce_auth_return', window.location.href); } catch (e) {}
+        try { window.top.location.replace(auth.url); }
+        catch (e) { window.location.replace(auth.url); }
+      } else {
+        // กลับมาจากหน้า consent แล้ว → ถ้า token หายไประหว่างทาง ให้กลับไปที่ URL เดิม (พร้อม token)
+        var saved = null;
+        try { saved = sessionStorage.getItem('ce_auth_return'); } catch (e) {}
+        if (saved) {
+          try { sessionStorage.removeItem('ce_auth_return'); } catch (e) {}
+          if (window.location.search.indexOf('token=') === -1 && saved.indexOf('token=') !== -1) {
+            window.location.replace(saved);
+          }
+        }
+      }
+    })();
   </script>
-  <script id="server-params-json" type="application/json"><?= serverParamsJson || '{}' ?></script>
 
   <!-- Main JavaScript App (ReviewModal must be included first) -->
   <?!= include('ReviewModal'); ?>

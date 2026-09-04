@@ -14,9 +14,14 @@ function runGAS(funcName, ...args) {
       setTimeout(() => resolve({ success: true }), 400);
       return;
     }
+    // Safety net: ต่อให้ google.script.run ไม่คืน callback (เช่น กรณี auth/scopes)
+    // ก็จะไม่ค้างที่ overlay โหลดตลอดไป และแสดงข้อความให้ผู้ใช้เสมอ
+    const timer = setTimeout(() => {
+      reject(new Error('การเชื่อมต่อหมดเวลา กรุณาลองใหม่อีกครั้ง'));
+    }, 90000);
     google.script.run
-      .withSuccessHandler((res) => resolve(res))
-      .withFailureHandler((err) => reject(err))
+      .withSuccessHandler((res) => { clearTimeout(timer); resolve(res); })
+      .withFailureHandler((err) => { clearTimeout(timer); reject(err); })
       [funcName](...args);
   });
 }
@@ -76,9 +81,9 @@ const i18n = {
 
     // Wizard Steps
     step0: 'ประเภทบุคคล',
-    step1: 'ข้อมูลและรูปถ่าย',
+    step1: 'ข้อมูลและ\nรูปถ่าย',
     step2: 'ห้อง, เวลา และนัดหมาย Biometric',
-    step3: 'ผู้อนุมัติขั้นที่ 1',
+    step3: 'ผู้อนุมัติ\nขั้นที่ 1',
     step4: 'ผู้ร่วมและติดต่อฉุกเฉิน',
 
     // Person Types
@@ -137,7 +142,7 @@ const i18n = {
     emergencyPlaceholder: 'ชื่อ-นามสกุล และเบอร์โทรศัพท์ติดต่อฉุกเฉิน',
 
     // Photo Upload
-    photoUploadTitle: 'รูปถ่ายผู้ยื่นคำขอ (หน้าตรง/บัตรประจำตัว)',
+    photoUploadTitle: 'รูปถ่ายผู้ยื่นคำขอ (หน้าตรง)',
     photoUploadHint: 'คลิกเพื่ออัปโหลดไฟล์ภาพ (JPG, PNG ไม่เกิน 2MB) — จำเป็น',
     photoChange: 'เปลี่ยนรูปภาพ',
     photoRequired: 'กรุณาอัปโหลดรูปถ่ายผู้ยื่นคำขอก่อนดำเนินการต่อ',
@@ -217,7 +222,24 @@ const i18n = {
     loadingLong: 'กรุณารอสักครู่...',
     errorTitle: 'เกิดข้อผิดพลาด',
     successTitle: 'สำเร็จ',
-    noData: 'ไม่พบข้อมูล'
+    noData: 'ไม่พบข้อมูล',
+
+    // Token and request errors
+    errTokenNotFound: 'ไม่พบ Token สำหรับเปิดรายละเอียดคำขอ',
+    errTokenInvalid: 'Token ไม่ถูกต้องหรือไม่พบคำขอที่เกี่ยวข้อง',
+    errTokenExpired: 'Token หมดอายุแล้ว กรุณาติดต่อผู้ดูแลระบบ',
+    errTokenUsed: 'Token นี้ถูกใช้งานไปแล้ว',
+    errTokenSuspended: 'Token ถูกระงับชั่วคราวเนื่องจากมีการเรียกใช้ผิดหลายครั้ง',
+    errUnauthenticated: 'กรุณาเข้าสู่ระบบด้วยบัญชี Google ก่อนใช้งาน (บัญชีเดียวกับที่ใช้ยื่นคำขอ)',
+    errUnauthorizedAccount: 'บัญชี Google นี้ไม่มีสิทธิ์ดูคำขอนี้',
+    errApproverMismatch: 'Token นี้ไม่ตรงกับผู้อนุมัติของขั้นตอน',
+    errStageMismatch: 'Token ไม่ตรงกับขั้นตอนปัจจุบันของคำขอนี้',
+    errWrongTokenType: 'Token นี้ไม่ใช่ Token สำหรับติดตามสถานะคำขอ',
+    errGenericToken: 'Token ไม่ถูกต้องหรือหมดอายุแล้ว',
+    errCannotOpen: 'ไม่สามารถเปิดรายละเอียดคำขอได้',
+    errNullResponse: 'ระบบไม่ตอบกลับ (เซิร์ฟเวอร์ไม่ส่งข้อมูลกลับมา) กรุณากดลองใหม่อีกครั้ง หากยังไม่สำเร็จ ให้เปิดลิงก์ใหม่ในแท็บใหม่ หรือติดต่อผู้ดูแลระบบเพื่อตรวจสอบเวอร์ชันของระบบ',
+    errBridgeDown: 'ยังไม่สามารถเชื่อมต่อกับระบบได้ (ยังไม่ได้เข้าสู่ระบบ/อนุญาตสิทธิ์ Google หรือถูกซอฟต์แวร์บล็อก) กรุณาเข้าสู่ระบบด้วยบัญชี Google ที่ได้รับลิงก์ แล้วกด "อนุญาต" เมื่อระบบขอสิทธิ์ หากยังไม่สำเร็จ ให้เปิดลิงก์ในเบราว์เซอร์ปกติโดยไม่ใช้โหมดไม่ระบุตัวตน',
+    btnRetry: 'ลองใหม่'
   },
   en: {
     systemName: 'After-Hours Civil Engineering Lab Access System',
@@ -289,7 +311,7 @@ const i18n = {
     emergencyPlaceholder: 'Full name and emergency phone number',
 
     // Photo Upload
-    photoUploadTitle: 'Applicant Photo / ID Card',
+    photoUploadTitle: 'Applicant Photo',
     photoUploadHint: 'Click to upload photo (JPG, PNG, max 2MB) — Required',
     photoChange: 'Change Photo',
     photoRequired: 'Please upload an applicant photo before proceeding.',
@@ -369,7 +391,24 @@ const i18n = {
     loadingLong: 'Please wait a moment...',
     errorTitle: 'Error',
     successTitle: 'Success',
-    noData: 'No data found'
+    noData: 'No data found',
+
+    // Token and request errors
+    errTokenNotFound: 'Token not found in request link',
+    errTokenInvalid: 'Invalid token or request not found',
+    errTokenExpired: 'Token has expired. Please contact the administrator',
+    errTokenUsed: 'This token has already been used',
+    errTokenSuspended: 'Token temporarily suspended due to multiple failed attempts',
+    errUnauthenticated: 'Please sign in with the Google account you used to submit this request',
+    errUnauthorizedAccount: 'This Google account is not authorized to view this request',
+    errApproverMismatch: 'This token does not match the approver for this stage',
+    errStageMismatch: 'Token does not match the current stage of this request',
+    errWrongTokenType: 'This token is not valid for status tracking',
+    errGenericToken: 'Invalid or expired token',
+    errCannotOpen: 'Unable to load request details',
+    errNullResponse: 'The server did not return a response. Please retry. If it still fails, reopen the link in a new tab or contact the administrator to check the system version.',
+    errBridgeDown: 'Cannot connect to the system yet (not signed in / Google permissions not granted, or blocked by security software). Please sign in with the Google account that received the link and click "Allow" when prompted. If it still fails, open the link in a normal (non-incognito) browser.',
+    btnRetry: 'Retry'
   }
 };
 
@@ -570,7 +609,7 @@ const RequestView = {
     selectAdvisor(adv) {
       this.selectedAdvisorObj = adv;
       this.form.advisorEmail = adv.email;
-      this.advisorSearch = `${adv.fullName} (${adv.division})`;
+      this.advisorSearch = `${adv.fullName} ${adv.division}`;
       this.isAdvisorOpen = false;
     },
     clearAdvisorSearch() {
@@ -689,7 +728,7 @@ const RequestView = {
     <div>
       <!-- Stepper Header -->
       <div class="stepper-wrap">
-        <div v-for="(name, idx) in [t.step0, t.step1, t.step2, t.step3, t.step4]" :key="idx" class="step-item">
+        <div v-for="(name, idx) in [t.step0, t.step1, t.step2, t.step3, t.step4]" :key="idx" :class="['step-item', currentStep > idx ? 'done' : '']">
           <div :class="['step-bubble', currentStep === idx ? 'active' : (currentStep > idx ? 'done' : '')]">
             {{ idx + 1 }}
           </div>
@@ -729,32 +768,32 @@ const RequestView = {
 
             <div v-if="form.personType === 'Staff'" class="form-field" style="margin-top:1rem;">
               <label class="field-label">{{ t.selectStaffType }} <span class="req">*</span></label>
-              <div class="type-selector type-selector-2">
-                <div :class="['type-card', form.staffType === 'Academic' ? 'active' : '']" @click="form.staffType = 'Academic'">
-                  <div class="type-icon">🎓</div>
-                  <h4 style="font-weight:700;">{{ t.academicStaff }}</h4>
+              <div class="sub-type-selector sub-type-selector-2">
+                <div :class="['sub-type-card', form.staffType === 'Academic' ? 'active' : '']" @click="form.staffType = 'Academic'">
+                  <span class="sub-type-icon">🎓</span>
+                  <span class="sub-type-label">{{ t.academicStaff }}</span>
                 </div>
-                <div :class="['type-card', form.staffType === 'Support' ? 'active' : '']" @click="form.staffType = 'Support'">
-                  <div class="type-icon">🛠️</div>
-                  <h4 style="font-weight:700;">{{ t.supportStaff }}</h4>
+                <div :class="['sub-type-card', form.staffType === 'Support' ? 'active' : '']" @click="form.staffType = 'Support'">
+                  <span class="sub-type-icon">🛠️</span>
+                  <span class="sub-type-label">{{ t.supportStaff }}</span>
                 </div>
               </div>
             </div>
 
             <div v-if="form.personType === 'Student'" class="form-field" style="margin-top:1rem;">
               <label class="field-label">{{ t.degreeLevel }} <span class="req">*</span></label>
-              <div class="type-selector">
-                <div :class="['type-card', form.degreeLevel === 'Bachelor' ? 'active' : '']" @click="form.degreeLevel = 'Bachelor'">
-                  <div class="type-icon">🎓</div>
-                  <h4 style="font-weight:700;">{{ t.bachelor }}</h4>
+              <div class="sub-type-selector">
+                <div :class="['sub-type-card', form.degreeLevel === 'Bachelor' ? 'active' : '']" @click="form.degreeLevel = 'Bachelor'">
+                  <span class="sub-type-icon">🎓</span>
+                  <span class="sub-type-label">{{ t.bachelor }}</span>
                 </div>
-                <div :class="['type-card', form.degreeLevel === 'Master' ? 'active' : '']" @click="form.degreeLevel = 'Master'">
-                  <div class="type-icon">📘</div>
-                  <h4 style="font-weight:700;">{{ t.master }}</h4>
+                <div :class="['sub-type-card', form.degreeLevel === 'Master' ? 'active' : '']" @click="form.degreeLevel = 'Master'">
+                  <span class="sub-type-icon">📘</span>
+                  <span class="sub-type-label">{{ t.master }}</span>
                 </div>
-                <div :class="['type-card', form.degreeLevel === 'Doctoral' ? 'active' : '']" @click="form.degreeLevel = 'Doctoral'">
-                  <div class="type-icon">🔬</div>
-                  <h4 style="font-weight:700;">{{ t.doctoral }}</h4>
+                <div :class="['sub-type-card', form.degreeLevel === 'Doctoral' ? 'active' : '']" @click="form.degreeLevel = 'Doctoral'">
+                  <span class="sub-type-icon">🔬</span>
+                  <span class="sub-type-label">{{ t.doctoral }}</span>
                 </div>
               </div>
             </div>
@@ -830,7 +869,7 @@ const RequestView = {
               <label class="field-label">{{ t.selectRoom }} <span class="req">*</span></label>
               <select v-model="form.roomId" class="field-select">
                 <option v-for="r in rooms" :key="r.roomId" :value="r.roomId">
-                  {{ r.roomName }} ({{ r.building }} - {{ r.floor }}) [{{ t[r.status] || r.status }}]
+                  {{ r.roomName }} — {{ r.building }}
                 </option>
               </select>
             </div>
@@ -1166,21 +1205,18 @@ const DashboardView = {
         this.$emit('loading', false);
       }
     },
-    async submitDecision(decision) {
-      if (decision === 'Reject' && !this.reviewNote) {
+    async submitDecision(payload) {
+      const decision = payload.decision;
+      const note = payload.note || '';
+      if (decision === 'Reject' && !note) {
         Swal.fire(this.t.errorTitle, 'กรุณาระบุเหตุผลในการปฏิเสธ', 'warning');
         return;
       }
 
       this.$emit('loading', true);
       try {
-        const extra = {};
-        if (this.reviewStage === 4 && decision === 'Approve') {
-          if (this.adminStartDate) extra.startDate = this.adminStartDate;
-          if (this.adminBiometricDate) extra.biometricAppointmentDate = this.adminBiometricDate;
-        }
-
-        const res = await runGAS('processApproval', this.reviewData.requestId, this.reviewStage, decision, this.reviewNote, this.reviewToken, extra);
+        const extra = payload.extra || {};
+        const res = await runGAS('processApproval', this.reviewData.requestId, this.reviewStage, decision, note, this.reviewToken, extra);
         gasCacheClear(); // สถานะคำขอเปลี่ยน — ล้าง cache ให้ stats สดเสมอ
         if (res.success) {
           Swal.fire({
@@ -1437,7 +1473,184 @@ const DashboardView = {
 };
 
 // ==========================================
-// 4. Main Vue 3 App Initialization
+// 4. Token Detail / Tracking View
+// ==========================================
+const TokenView = {
+  props: ['lang', 't', 'userEmail', 'userRole'],
+  emits: ['loading', 'close'],
+  components: { ReviewModal, StatusBadge, TimelineStep, ModalConfirm },
+  data() {
+    return {
+      reviewData: null,
+      reviewToken: '',
+      reviewStage: 1,
+      view: 'status',
+      errorKey: '',
+      errorRaw: '',
+      showReviewModal: false,
+      forceReadOnly: false
+    };
+  },
+  computed: {
+    displayError() {
+      if (this.errorKey && this.t[this.errorKey]) return this.t[this.errorKey];
+      if (this.errorRaw) return this.errorRaw;
+      return this.t.errCannotOpen;
+    }
+  },
+  methods: {
+    resolveErrorKey(res, fallbackErr) {
+      // Server returns { success: false, errorCode: '...', message: '...' }
+      var errorCode = (res && res.errorCode) || '';
+      var keyMap = {
+        'TOKEN_NOT_FOUND': 'errTokenInvalid',
+        'TOKEN_INVALID': 'errTokenInvalid',
+        'TOKEN_EXPIRED': 'errTokenExpired',
+        'TOKEN_USED': 'errTokenUsed',
+        'TOKEN_SUSPENDED': 'errTokenSuspended',
+        'UNAUTHENTICATED': 'errUnauthenticated',
+        'UNAUTHORIZED': 'errUnauthorizedAccount',
+        'UNAUTHORIZED_ACCOUNT': 'errUnauthorizedAccount',
+        'APPROVER_MISMATCH': 'errApproverMismatch',
+        'STAGE_MISMATCH': 'errStageMismatch',
+        'WRONG_TOKEN_TYPE': 'errWrongTokenType',
+        'TOKEN_ERROR': 'errGenericToken',
+        'REQUESTS_SHEET_MISSING': 'errCannotOpen'
+      };
+      this.errorKey = keyMap[errorCode] || '';
+      var raw =
+        (res && res.message) ||
+        (fallbackErr && fallbackErr.message) ||
+        (fallbackErr && typeof fallbackErr === 'string' ? fallbackErr : '') ||
+        (res && res.errorCode) ||
+        '';
+      // กันไม่ให้ error จริงถูกกลืนหาย: ถ้ายังว่างแต่มี fallbackErr ให้ถอดทั้งก้อนออกมาแสดง
+      if (!raw && fallbackErr) {
+        try { raw = JSON.stringify(fallbackErr); } catch (e) { raw = String(fallbackErr); }
+      }
+      this.errorRaw = raw;
+      if (raw) console.error('[TokenView] errorCode=' + (errorCode || 'NO_CODE') + ' → ' + raw);
+    },
+    close() {
+      // ล้าง token/view/stage ออกจากทั้ง URL และ SERVER_PARAMS เพื่อกันไม่ให้วนกลับมาเปิดหน้า token ซ้ำ
+      try {
+        const url = new URL(window.location.href);
+        ['token', 'view', 'stage', 'action', 'note'].forEach(k => url.searchParams.delete(k));
+        url.hash = '';
+        window.history.replaceState({}, '', url.pathname + url.search);
+      } catch (e) { /* ignore URL cleanup errors */ }
+      try {
+        if (window.SERVER_PARAMS) {
+          ['token', 'view', 'stage', 'action', 'note'].forEach(k => { delete window.SERVER_PARAMS[k]; });
+        }
+      } catch (e) { /* ignore */ }
+      // กลับไปหน้า dashboard ด้วยการคลิกครั้งเดียว (Index.html ผูก @close ไว้เป็น currentTab = 'dashboard')
+      this.$emit('close');
+    },
+    async submitDecision(payload) {
+      this.$emit('loading', true);
+      try {
+        const res = await runGAS('processApproval', payload.requestId, payload.stage, payload.decision,
+          payload.note, this.reviewToken, payload.extra || {});
+        if (!res || !res.success) throw new Error((res && res.message) || 'ไม่สามารถบันทึกผลการพิจารณาได้');
+        await Swal.fire({ title: payload.decision === 'Approve' ? this.t.Approved : this.t.Rejected,
+          text: 'คำขอเลขที่: ' + payload.requestId, icon: 'success' });
+        this.$emit('close');
+      } catch (err) {
+        this.resolveErrorKey(null, err);
+        Swal.fire(this.t.errorTitle, this.displayError || this.t.errCannotOpen, 'error');
+      } finally {
+        this.$emit('loading', false);
+      }
+    },
+    async loadRequest() {
+      this.errorKey = '';
+      this.errorRaw = '';
+      this.$emit('loading', true);
+      try {
+        // Probe: ตรวจก่อนว่า google.script.run ถึงเซิร์ฟเวอร์และ execute ได้จริงหรือไม่
+        // ถ้าฟังก์ชันขั้นต่ำ (ping) ยังได้ null แสดงว่าปัญหาอยู่ที่ auth/bridge ไม่ใช่ตัวฟังก์ชัน
+        let bridgeOk = false;
+        try {
+          const probe = await runGAS('ping');
+          console.log('[TokenView] bridge probe result:', probe);
+          bridgeOk = !!(probe && probe.ok);
+        } catch (probeErr) {
+          console.error('[TokenView] bridge probe FAILED:', probeErr);
+        }
+        if (!bridgeOk) {
+          this.errorKey = 'errBridgeDown';
+          return;
+        }
+
+        // วินิจฉัยเพิ่ม: หาว่า verifyToken / buildReviewPayload พังตรงไหน (object เล็ก ปลอดภัยต่อ serialize)
+        try {
+          const diag = await runGAS('debugGetToken', this.reviewToken, this.view === 'status' ? null : this.reviewStage);
+          console.log('[TokenView] debugGetToken result:', diag);
+        } catch (diagErr) {
+          console.error('[TokenView] debugGetToken FAILED:', diagErr);
+        }
+
+        // ใช้ getApprovalRequestByToken ตัวเดียวสำหรับทั้ง status และ approver —
+        // ฟังก์ชันนี้มีอยู่แล้วใน backend และรองรับ RequestToken (detectedStage === 'Request') อยู่แล้ว
+        const maxAttempts = 1;
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          const res = await runGAS('getApprovalRequestByToken', this.reviewToken, this.view === 'status' ? null : this.reviewStage);
+          console.log('[TokenView] getApprovalRequestByToken attempt ' + attempt + '/' + maxAttempts + ' result:', res);
+          if (res === null || res === undefined) {
+            // google.script.run คืน null เฉย ๆ (ไม่ใช่ error object) — ลองซ้ำอัตโนมัติก่อนแสดง error
+            if (attempt < maxAttempts) {
+              await new Promise(r => setTimeout(r, 900 * attempt));
+              continue;
+            }
+            this.errorKey = 'errNullResponse';
+            return;
+          }
+          if (!res.success) {
+            this.resolveErrorKey(res, null);
+            return;
+          }
+          this.reviewData = res;
+          if (res.readOnlyView) this.forceReadOnly = true;
+          return;
+        }
+      } catch (err) {
+        console.error('[TokenView] runGAS rejected:', err);
+        this.resolveErrorKey(null, err);
+      } finally {
+        this.$emit('loading', false);
+      }
+    }
+  },
+  async mounted() {
+    const params = new URLSearchParams(window.location.search);
+    this.reviewToken = params.get('token') || (window.SERVER_PARAMS && window.SERVER_PARAMS.token) || '';
+    this.view = params.get('view') || (window.SERVER_PARAMS && window.SERVER_PARAMS.view) || 'status';
+    this.reviewStage = Number(params.get('stage') || (window.SERVER_PARAMS && window.SERVER_PARAMS.stage) || 1);
+    if (!this.reviewToken) {
+      this.errorKey = 'errTokenNotFound';
+      return;
+    }
+    await this.loadRequest();
+  },
+  template: `
+    <div>
+      <div v-if="errorKey || errorRaw" class="box-card" style="max-width:760px;margin:0 auto;padding:24px;color:#b91c1c;text-align:center;">
+        <p style="margin:0 0 16px 0;">{{ displayError }}</p>
+        <button v-if="errorKey === 'errNullResponse' || errorKey === 'errBridgeDown'" class="ui-btn ui-btn-primary" @click="loadRequest()">{{ t.btnRetry }}</button>
+      </div>
+      <review-modal v-else-if="reviewData"
+        :t="t" :review-data="reviewData" :review-stage="reviewStage"
+        :read-only="view !== 'approver' || forceReadOnly" :full-page="true"
+        @close="close" @submit="submitDecision">
+      </review-modal>
+      <div v-else class="box-card" style="max-width:760px;margin:0 auto;padding:24px;color:#334155;text-align:center;">{{ t.errCannotOpen }}</div>
+    </div>
+  `
+};
+
+// ==========================================
+// 5. Main Vue 3 App Initialization
 // ==========================================
 const { createApp } = Vue;
 
@@ -1445,10 +1658,12 @@ const app = createApp({
   data() {
     const urlParams = new URLSearchParams(window.location.search);
     const getParam = (key) => urlParams.get(key) || (window.SERVER_PARAMS && window.SERVER_PARAMS[key]);
+    const view = getParam('view');
+    const hasTokenView = !!getParam('token') && ['status', 'detail', 'approver'].indexOf(view) >= 0;
     const hasTokenOrReview = getParam('token') || getParam('action') || window.location.hash === '#dashboard';
 
     return {
-      currentTab: hasTokenOrReview ? 'dashboard' : 'request',
+      currentTab: hasTokenView ? 'token' : (hasTokenOrReview ? 'dashboard' : 'request'),
       currentLang: localStorage.getItem('app_lang') || 'th',
       userEmail: window.PRELOADED_USER_EMAIL || '',
       userRole: 'Applicant',
@@ -1463,7 +1678,7 @@ const app = createApp({
     loadingMessages() {
       return this.currentLang === 'en'
         ? [this.t.loading, this.t.loadingLong, 'Creating request...', 'Verifying data...', 'Connecting to server...']
-        : [this.t.loading, this.t.loadingLong, 'สร้างคำขอ...', 'กำลังตรวจสอบข้อมูล...', 'กำลังเชื่อมต่อเซิร์ฟเวอร์...'];
+        : [this.t.loading, this.t.loadingLong, 'กำลังสร้างคำขอ...', 'กำลังตรวจสอบข้อมูล...', 'กำลังเชื่อมต่อเซิร์ฟเวอร์...'];
     },
     loadingText() {
       const msgs = this.loadingMessages;
@@ -1500,7 +1715,7 @@ const app = createApp({
         this.loadingMsgIdx = 0;
         this.loadingTimer = setInterval(() => {
           this.loadingMsgIdx = (this.loadingMsgIdx + 1) % this.loadingMessages.length;
-        }, 2500);
+        }, 4000);
       } else {
         this.loadingMsgIdx = 0;
       }
@@ -1516,6 +1731,7 @@ app.component('timeline-step', TimelineStep);
 app.component('loading-spinner', LoadingSpinner);
 app.component('request-view', RequestView);
 app.component('dashboard-view', DashboardView);
+app.component('token-view', TokenView);
 
 app.mount('#app');
 </script>

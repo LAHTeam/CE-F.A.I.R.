@@ -6,6 +6,7 @@
 .env.*
 *.secret
 *.key
+litellm_config.yaml
 
 # Editors and operating-system files
 .vscode/
