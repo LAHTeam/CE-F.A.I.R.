@@ -20,7 +20,7 @@
 #### บทบาทในระบบ (User Roles)
 | บทบาท | หน้าที่และความรับผิดชอบ |
 | :--- | :--- |
-| **Applicant (ผู้ยื่นคำขอ)** | นักศึกษา (ป.ตรี/โท/เอก), บุคลากร หรือบุคคลภายนอก ยื่นคำขอพร้อมแนบภาพถ่ายและลายเซ็นดิจิทัล |
+| **Applicant (ผู้ยื่นคำขอ)** | นักศึกษา (ป.ตรี/โท/เอก), บุคลากร หรือบุคคลภายนอก ยื่นคำขอพร้อมแนบภาพถ่าย |
 | **Advisor (อาจารย์ที่ปรึกษา)** | ผู้อนุมัติขั้นตอนที่ 1 สำหรับนักศึกษาภาควิชา |
 | **Head of Civil Eng (หัวหน้าสาขาวิชา)** | ผู้อนุมัติขั้นตอนที่ 1 โดยอัตโนมัติ ในกรณีที่ผู้ขอเป็นบุคคลภายนอก/ต่างสาขา |
 | **Division Staff (เจ้าหน้าที่ประจำแผนก)** | ผู้อนุมัติขั้นตอนที่ 2 ตรวจสอบความพร้อมของวัสดุ อุปกรณ์ และความปลอดภัย |
@@ -99,8 +99,8 @@
 | 43 | `BiometricAppointmentDate` | DateTime | วันและเวลาที่นัดหมายมาสแกนลายนิ้วมือ/ใบหน้า |
 | 44 | `BiometricStatus` | String | สถานะชีวมิติ: `Pending`, `Scheduled`, `Completed` |
 | 45 | `CurrentStage` | Number | ขั้นตอนปัจจุบัน (1-4) |
-| 46 | `OverallStatus` | String | สถานะรวม: `Pending`, `Approved`, `Rejected` |
-| 47 | `SignatureData` | String | Base64 PNG ของลายเซ็นดิจิทัล (ส่งเฉพาะ `image/*` whitelist) |
+| 46 | `OverallStatus` | String | สถานะรวม: `InReview`, `Approved`, `Rejected`, `Active`, `Expired` |
+| 47 | `SignatureData` | String | คอลัมน์สำรอง (Legacy) — คงไว้เพื่อรักษาตำแหน่งคอลัมน์ถัดไป (index alignment) ไม่ถูกเขียนหรืออ่านโดยโค้ดในปัจจุบัน |
 | 48 | `PhotoURL` | String | URL รูปถ่ายหน้าตรง (ชื่อไฟล์สุ่ม `IMG_<uuid>`, จำกัด 5 MB, whitelist JPEG/PNG/WebP, ไม่เปิดเผยแขวดข้อมูลในชื่อไฟล์) |
 | 49 | `RequestToken` | String | Secure Token สำหรับผู้ยื่นคำขอใช้เปิดดู Tracking Modal |
 | 50 | `Stage1_TokenUsedAt` | DateTime | **(Token Security)** วันเวลาที่ Token ขั้น 1 ถูกใช้ครั้งแรก (ใช้ได้ 1 ครั้งเท่านั้น) |
@@ -145,7 +145,7 @@
 | `MAINTENANCE_MODE` | `FALSE` | เปิด/ปิดโหมดปิดปรับปรุง |
 | `TOKEN_EXPIRY_DAYS` | `7` | อายุ token สำหรับอนุมัติ (วัน) |
 | `APPROVAL_REMINDER_DAYS` | `3` | จำนวนวันก่อนระบบส่งอีเมลแจ้งเตือนซ้ำ |
-| `LAST_ACCESS_CODE_SEQ` | `0500` | Running Sequence เริ่มที่ 0500; รหัสถัดไปเริ่ม 0501 และวนจาก 9999 กลับ 0501 |
+| `LAST_ACCESS_CODE_SEQ` | `0500` | Running Sequence เริ่มที่ 0500; รหัสถัดไปเริ่ม 0501 และวนจาก 9999 กลับ 0001 |
 | `LAST_REQUEST_ID` | `0` | Running Number ของ Request ID |
 | `LAST_USER_ID` | `0` | Running Number ของ User ID |
 | `DATA_RETENTION_MONTHS` | `12` | ระยะเวลาเก็บข้อมูลตามการตั้งค่าระบบ |
@@ -226,7 +226,7 @@ Content-Type: application/json
 3. รันฟังก์ชัน `initDatabase()` เพื่อสร้างชีตทั้ง 10 แท็บพร้อม Header
 4. แก้ไขข้อมูลในชีต `Rooms`, `Advisor`, `DivisionStaff`, `LabHead`, `Admin` และ `Settings` ให้เป็นของหน่วยงานใหม่
 5. ตั้งค่า `ORG_API_KEY` และเมื่อเปิดใช้งานอุปกรณ์ให้ตั้ง `BIOMETRIC_API_URL` กับ `BIOMETRIC_WEBHOOK_SECRET` ใน **Project Settings > Script Properties** (ห้ามใส่ค่าจริงในเอกสารหรือซอร์สโค้ด)
-6. กด **Deploy > New Deployment > Web App (Execute as: User accessing the web app, Access: Anyone within domain)** แล้วนำ URL ไปใช้งานได้ โดยผู้ใช้ต้องเข้าสู่ระบบด้วย Google Account ขององค์กร
+6. กด **Deploy > New Deployment > Web App (Execute as: User accessing the web app, Access: Anyone with the link)** แล้วนำ URL ไปใช้งานได้ โดยผู้ใช้ต้องเข้าสู่ระบบด้วย Google Account ก่อนใช้งาน (การเขียนข้อมูลยังต้องผ่านการยืนยันตัวตนตามบัญชีที่เข้าสู่ระบบ)
 ```
 
 ---

@@ -23,8 +23,8 @@ console.log('\n[2] appsscript.json syntax');
 try {
   const manifest = JSON.parse(read('appsscript.json'));
   ok('appsscript.json is valid JSON');
-  if (manifest.webapp && manifest.webapp.access === 'DOMAIN') ok('webapp.access is DOMAIN (no public ANYONE)');
-  else fail('webapp.access should be DOMAIN, got: ' + (manifest.webapp && manifest.webapp.access));
+  if (manifest.webapp && manifest.webapp.access === 'ANYONE') ok('webapp.access is ANYONE (public link; actions still require Google sign-in)');
+  else fail('webapp.access should be ANYONE, got: ' + (manifest.webapp && manifest.webapp.access));
   if (Array.isArray(manifest.oauthScopes) && manifest.oauthScopes.length > 0) ok('oauthScopes declared (' + manifest.oauthScopes.length + ')');
   else fail('oauthScopes not declared');
 } catch (e) { fail('appsscript.json parse error: ' + e.message); }

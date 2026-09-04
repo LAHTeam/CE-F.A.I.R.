@@ -393,7 +393,7 @@ function assertNoDuplicateRequest(data, userEmail) {
     if (['Rejected', 'Expired'].indexOf(status) !== -1) continue;
     var sameUser = String(row[map.ApplicantEmail - 1] || '').trim().toLowerCase() === userEmail;
     var sameRoom = String(row[map.RoomID - 1] || '').trim() === targetRoom;
-    var activeStatuses = ['Approved', 'Active', 'Pending', 'InReview', 'Pending_Stage1', 'Pending_Stage2', 'Pending_Stage3', 'Pending_Stage4'];
+    var activeStatuses = ['Approved', 'Active', 'Pending', 'InReview'];
 
     var rowStart = new Date(row[map.StartDate - 1]).getTime();
     var rowEnd = new Date(row[map.EndDate - 1] || row[map.StartDate - 1]).getTime();
@@ -1290,7 +1290,6 @@ function submitRequest(data) {
     put('BiometricStatus', bioStatus);
     put('CurrentStage', currentStage);
     put('OverallStatus', overallStatus);
-    put('SignatureData', data.signatureData || '');
     put('PhotoURL', photoUrl);
     put('RequestToken', requestToken);
     requestsSheet.appendRow(requestRow);
@@ -1769,7 +1768,7 @@ function enrichApplicantPayload(row) {
 
   // Read all extra fields from Users sheet in one pass
   var advisorName = '-';
-  var projectTopic = String(row[11] || '') || '-';
+  var projectTopic = '-';
   var justification = '-';
   var externalOrg = '';
   var userData = getUserByEmail(userEmail);
@@ -2068,16 +2067,8 @@ function getDashboardStats() {
       var requestId = String(row[0] || '');
       if (!requestId) continue;
 
-      var timestamp = row[1];
-      var applicantName = String(row[3] || '');
-      var applicantEmail = String(row[4] || '');
       var applicantType = String(row[5] || 'Student'); // Student, Staff, External
-      var dept = String(row[7] || '').trim();
-      var roomName = String(row[10] || 'ไม่ระบุ');
       var status = String(row[45] || 'Pending');
-
-      // Stage 1 Approver Email (used for advisor stats if Student is Civil)
-      var stage1Email = String(row[18] || '').trim();
 
       stats.totalRequests++;
       if (status === 'Active') stats.activeRequests++;
@@ -2094,10 +2085,6 @@ function getDashboardStats() {
 
       // 2. Person Type Stats
       stats.personTypeStats[applicantType] = (stats.personTypeStats[applicantType] || 0) + 1;
-
-      // Since the request doesn't directly store degreeLevel or division in the main Requests sheet columns 
-      // (but it might store them under other columns or we can lookup the user, or let's inspect the User row fields, 
-      // or check where the form fields map to the sheet rows)
     }
 
     // Let's do a cross-reference lookup with Users table to get detailed student division/degree info
@@ -2424,6 +2411,65 @@ function sendRoomClosureNotification(closureData) {
 }
 
 /**
+ * ตัวช่วยรวม: วนหาแถว RoomClosures ที่ยังไม่ได้แจ้งเตือน แล้วส่งอีเมล + ติ๊ก NotifiedAt
+ * ใช้ร่วมกันทั้ง onEdit (เฉพาะ range ที่แก้) และ manual fallback (ทั้งชีต)
+ * @param {number|null} fromIdx 0-based data index เริ่มต้น (null = แถวข้อมูลแรก)
+ * @param {number|null} toIdx   0-based data index สิ้นสุด (null = แถวข้อมูลสุดท้าย)
+ */
+function processPendingRoomClosures(fromIdx, toIdx) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('RoomClosures');
+  if (!sheet) return { success: false, message: 'ไม่พบชีต RoomClosures' };
+
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var colMap = {};
+  for (var h = 0; h < headers.length; h++) colMap[String(headers[h]).trim()] = h;
+
+  var hasRequiredCols = colMap['Title'] !== undefined && colMap['StartDate'] !== undefined && colMap['EndDate'] !== undefined;
+  if (!hasRequiredCols) return { success: false, message: 'ชีต RoomClosures ไม่มีคอลัมน์ Title/StartDate/EndDate ที่จำเป็น' };
+
+  var notifiedIdx = colMap['NotifiedAt'] !== undefined ? colMap['NotifiedAt'] : -1;
+  var data = sheet.getDataRange().getValues();
+
+  var from = (fromIdx !== undefined && fromIdx !== null) ? fromIdx : 1;
+  var to = (toIdx !== undefined && toIdx !== null) ? toIdx : (data.length - 1);
+  if (from < 1) from = 1;
+  if (to >= data.length) to = data.length - 1;
+
+  var sentCount = 0;
+  var skippedCount = 0;
+
+  for (var r = from; r <= to; r++) {
+    var row = data[r];
+    var title = String(row[colMap['Title']] || '').trim();
+    var startDate = row[colMap['StartDate']] || '';
+    var endDate = row[colMap['EndDate']] || '';
+
+    // ส่งเฉพาะเมื่อกรอก Title และวันที่ครบ และยังไม่เคยส่ง
+    if (!title || (!startDate && !endDate)) continue;
+
+    var alreadyNotified = notifiedIdx >= 0 ? String(row[notifiedIdx] || '').trim() : '';
+    if (alreadyNotified) { skippedCount++; continue; }
+
+    var result = sendRoomClosureNotification({
+      closureId: String(row[colMap['ClosureID']] || '').trim(),
+      title: title,
+      description: String(row[colMap['Description']] || '').trim(),
+      startDate: startDate,
+      endDate: endDate,
+      affectedRoomIds: String(row[colMap['AffectedRoomIDs']] || '').trim()
+    });
+
+    if (result.success) {
+      if (notifiedIdx >= 0) sheet.getRange(r + 1, notifiedIdx + 1).setValue(new Date());
+      sentCount++;
+    }
+  }
+
+  return { success: true, sentCount: sentCount, skippedCount: skippedCount };
+}
+
+/**
  * Installable onEdit: ตรวจจับการกรอกข้อมูลในชีต RoomClosures แล้วส่งอีเมลอัตโนมัติ
  */
 function onRoomClosuresEdit(e) {
@@ -2431,43 +2477,9 @@ function onRoomClosuresEdit(e) {
     if (!e || !e.range) return;
     var sheet = e.range.getSheet();
     if (sheet.getName() !== 'RoomClosures') return;
-
     var startRow = Math.max(2, e.range.getRow());
     var endRow = e.range.getLastRow();
-    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    var colMap = {};
-    for (var h = 0; h < headers.length; h++) {
-      colMap[String(headers[h]).trim()] = h;
-    }
-
-    var hasRequiredCols = colMap['Title'] !== undefined && colMap['StartDate'] !== undefined && colMap['EndDate'] !== undefined;
-    if (!hasRequiredCols) return;
-
-    var notifiedIdx = colMap['NotifiedAt'] !== undefined ? colMap['NotifiedAt'] : -1;
-
-    for (var row = startRow; row <= endRow; row++) {
-      var values = sheet.getRange(row, 1, 1, sheet.getLastColumn()).getValues()[0];
-      var title = String(values[colMap['Title']] || '').trim();
-      var startDate = values[colMap['StartDate']] || '';
-      var endDate = values[colMap['EndDate']] || '';
-      var alreadyNotified = notifiedIdx >= 0 ? String(values[notifiedIdx] || '').trim() : '';
-
-      // ส่งเฉพาะเมื่อกรอก Title และวันที่ครบ และยังไม่เคยส่ง
-      if (title && (startDate || endDate) && !alreadyNotified) {
-        var result = sendRoomClosureNotification({
-          closureId: String(values[colMap['ClosureID']] || '').trim(),
-          title: title,
-          description: String(values[colMap['Description']] || '').trim(),
-          startDate: startDate,
-          endDate: endDate,
-          affectedRoomIds: String(values[colMap['AffectedRoomIDs']] || '').trim()
-        });
-
-        if (result.success && notifiedIdx >= 0) {
-          sheet.getRange(row, notifiedIdx + 1).setValue(new Date());
-        }
-      }
-    }
+    processPendingRoomClosures(startRow - 1, endRow - 1);
   } catch (err) {
     writeLog('Error', 'onRoomClosuresEdit', 'RoomClosures', '', err.toString(), 'Fail');
   }
@@ -2496,45 +2508,10 @@ function setupRoomClosureEmailTrigger() {
  */
 function sendPendingRoomClosureNotifications() {
   try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName('RoomClosures');
-    if (!sheet) return { success: false, message: 'ไม่พบชีต RoomClosures' };
-
-    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    var colMap = {};
-    for (var h = 0; h < headers.length; h++) colMap[String(headers[h]).trim()] = h;
-
-    var data = sheet.getDataRange().getValues();
-    var sentCount = 0;
-    var skippedCount = 0;
-
-    for (var r = 1; r < data.length; r++) {
-      var row = data[r];
-      var title = String(row[colMap['Title']] || '').trim();
-      var startDate = row[colMap['StartDate']] || '';
-      var endDate = row[colMap['EndDate']] || '';
-      var alreadyNotified = String(row[colMap['NotifiedAt']] || '').trim();
-
-      if (title && (startDate || endDate) && !alreadyNotified) {
-        var res = sendRoomClosureNotification({
-          closureId: String(row[colMap['ClosureID']] || '').trim(),
-          title: title,
-          description: String(row[colMap['Description']] || '').trim(),
-          startDate: startDate,
-          endDate: endDate,
-          affectedRoomIds: String(row[colMap['AffectedRoomIDs']] || '').trim()
-        });
-        if (res.success) {
-          sheet.getRange(r + 1, colMap['NotifiedAt'] + 1).setValue(new Date());
-          sentCount++;
-        }
-      } else if (title && (startDate || endDate) && alreadyNotified) {
-        skippedCount++;
-      }
-    }
-
-    writeLog('AdminAction', 'sendPendingRoomClosureNotifications', 'RoomClosures', 'SYSTEM', 'ส่งแล้ว ' + sentCount + ' รายการ (ข้ามไปแล้ว ' + skippedCount + ' รายการ)', 'Success');
-    return { success: true, sentCount: sentCount, skippedCount: skippedCount, message: 'ส่งอีเมลแจ้งเตือนแล้ว ' + sentCount + ' รายการ' };
+    var res = processPendingRoomClosures(null, null);
+    if (!res.success) return { success: false, message: res.message || 'ไม่สามารถส่งการแจ้งเตือนได้' };
+    writeLog('AdminAction', 'sendPendingRoomClosureNotifications', 'RoomClosures', 'SYSTEM', 'ส่งแล้ว ' + res.sentCount + ' รายการ (ข้ามไปแล้ว ' + res.skippedCount + ' รายการ)', 'Success');
+    return { success: true, sentCount: res.sentCount, skippedCount: res.skippedCount, message: 'ส่งอีเมลแจ้งเตือนแล้ว ' + res.sentCount + ' รายการ' };
   } catch (err) {
     writeLog('Error', 'sendPendingRoomClosureNotifications', 'RoomClosures', '', err.toString(), 'Fail');
     return { success: false, message: err.toString() };
@@ -2575,86 +2552,6 @@ function getUserByEmail(email) {
     return null;
   } catch (e) {
     return null;
-  }
-}
-
-function getRequestByTokenOrSearch(query) {
-  try {
-    var actorEmail = requireAuthenticatedUser();
-    if (!query) return null;
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName('Requests');
-    if (!sheet) return null;
-
-    var data = sheet.getDataRange().getValues();
-    var cleanQuery = String(query).trim().toLowerCase();
-    var results = [];
-
-    for (var i = 1; i < data.length; i++) {
-      var row = data[i];
-      var rowApplicantEmail = String(row[4] || '').trim().toLowerCase();
-      if (!verifyUserRole(actorEmail, 'Admin') && rowApplicantEmail !== actorEmail) continue;
-      var rId = String(row[0]).trim().toLowerCase();
-      var rEmail = String(row[4]).trim().toLowerCase();
-      var rPhone = String(row[8]).trim().toLowerCase().replace(/-/g, '');
-      var rToken = String(row[48] || row[47]).trim().toLowerCase();
-      var s1Token = String(row[22]).trim().toLowerCase();
-      var s2Token = String(row[28]).trim().toLowerCase();
-      var s3Token = String(row[34]).trim().toLowerCase();
-      var s4Token = String(row[40]).trim().toLowerCase();
-      var queryDigits = cleanQuery.replace(/-/g, '');
-
-      if (rId === cleanQuery || rToken === cleanQuery || s1Token === cleanQuery || s2Token === cleanQuery || s3Token === cleanQuery || s4Token === cleanQuery || rEmail === cleanQuery || rPhone === queryDigits || String(row[8]).trim().toLowerCase() === cleanQuery) {
-        results.push({
-          requestId: row[0],
-          timestamp: row[1] instanceof Date ? Utilities.formatDate(row[1], 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') : row[1],
-          applicantName: row[3],
-          applicantEmail: row[4],
-          applicantType: row[5],
-          submittedByRole: row[6],
-          department: row[7],
-          phone: row[8],
-          roomId: row[9],
-          roomName: row[10],
-          purpose: row[11],
-          startDate: row[12] instanceof Date ? Utilities.formatDate(row[12], 'Asia/Bangkok', 'yyyy-MM-dd') : row[12],
-          endDate: row[13] instanceof Date ? Utilities.formatDate(row[13], 'Asia/Bangkok', 'yyyy-MM-dd') : row[13],
-          allowedTimeStart: row[14],
-          allowedTimeEnd: row[15],
-          participantNames: row[16],
-          emergencyContact: row[17],
-          stage1: { email: row[18], status: row[19], date: row[20], note: row[21] },
-          stage2: { email: row[24], status: row[25], date: row[26], note: row[27] },
-          stage3: { email: row[30], status: row[31], date: row[32], note: row[33] },
-          stage4: { email: row[36], status: row[37], date: row[38], note: row[39] },
-          biometricAppointmentDate: row[42] instanceof Date ? Utilities.formatDate(row[42], 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') : row[42],
-          biometricStatus: row[43],
-          currentStage: row[44],
-          overallStatus: row[45],
-          photoUrl: row[47],
-          requestToken: row[48] || row[47]
-        });
-      }
-    }
-    return results;
-  } catch (e) {
-    return [];
-  }
-}
-
-function getRequestStatusByToken(requestToken) {
-  try {
-    var verified = verifyToken(requestToken, null);
-    if (verified.detectedStage !== 'Request') {
-      throw tokenValidationError('WRONG_TOKEN_TYPE', 'Token นี้ไม่ใช่ Token สำหรับติดตามสถานะคำขอ');
-    }
-    var payload = buildReviewPayload(verified.requestData, verified.requestData[44]);
-    payload.tokenType = 'Request';
-    return payload;
-  } catch (err) {
-    var msg = (err && (err.message || err.toString())) || 'เกิดข้อผิดพลาดในการเปิดรายละเอียดคำขอ';
-    writeLog('Error', 'getRequestStatusByToken', 'Requests', requestToken || '', msg, 'Fail');
-    return { success: false, errorCode: (err && err.errorCode) || 'TOKEN_ERROR', message: msg };
   }
 }
 
@@ -2792,7 +2689,6 @@ function buildReviewPayload(row, currentStage) {
     biometricAppointmentDateDisplay: formatThaiDateTime(row[42]),
     currentStage: currentStage || row[44],
     overallStatus: row[45],
-    signatureData: row[46],
     photoUrl: row[47],
     accessCode: accessCode,
     requestToken: row[48] || row[47] || '',
@@ -3160,266 +3056,6 @@ function verifyUserRole(email, requiredRole) {
   return role === requiredRole;
 }
 
-/**
- * ตรวจสอบความขัดแย้งของเวลาการใช้ห้อง (Time Conflict Check)
- */
-function checkTimeConflict(roomId, startDate, endDate, allowedTimeStart, allowedTimeEnd) {
-  try {
-    requireAuthenticatedUser();
-    if (!roomId || !startDate) return { hasConflict: false };
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName('Requests');
-    if (!sheet) return { hasConflict: false };
-
-    var data = sheet.getDataRange().getValues();
-    var targetStart = new Date(startDate).getTime();
-    var targetEnd = endDate ? new Date(endDate).getTime() : targetStart;
-
-    var conflicts = [];
-    for (var i = 1; i < data.length; i++) {
-      var row = data[i];
-      var rId = String(row[9] || '');
-      var status = String(row[45] || '');
-
-      if (rId === String(roomId) && (status === 'Approved' || status === 'Active')) {
-        var sDate = row[12] instanceof Date ? row[12].getTime() : new Date(row[12]).getTime();
-        var eDate = row[13] instanceof Date ? row[13].getTime() : new Date(row[13]).getTime();
-
-        // ตรวจสอบช่วงวันที่ทับซ้อนกัน
-        if (targetStart <= eDate && targetEnd >= sDate) {
-          conflicts.push({
-            requestId: row[0],
-            applicantName: row[3],
-            startDate: Utilities.formatDate(new Date(sDate), 'Asia/Bangkok', 'yyyy-MM-dd'),
-            endDate: Utilities.formatDate(new Date(eDate), 'Asia/Bangkok', 'yyyy-MM-dd'),
-            time: (row[14] || '') + ' - ' + (row[15] || '')
-          });
-        }
-      }
-    }
-
-    return { hasConflict: conflicts.length > 0, conflicts: conflicts };
-  } catch (err) {
-    return { hasConflict: false, error: err.toString() };
-  }
-}
-
-/**
- * ตรวจสอบว่าห้องปิดตามวันหยุดหรือประกาศปิดห้องหรือไม่
- */
-function checkRoomClosure(roomId, date) {
-  try {
-    requireAuthenticatedUser();
-    if (!date) return { isClosed: false };
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName('RoomClosures');
-    if (!sheet) return { isClosed: false };
-
-    var data = sheet.getDataRange().getValues();
-    var checkTime = new Date(date).getTime();
-
-    for (var i = 1; i < data.length; i++) {
-      var row = data[i];
-      var affected = String(row[5] || '').trim();
-      var sDate = row[3] instanceof Date ? row[3].getTime() : new Date(row[3]).getTime();
-      var eDate = row[4] instanceof Date ? row[4].getTime() : (row[4] ? new Date(row[4]).getTime() : sDate);
-
-      var isRoomMatch = affected === 'ALL' || !roomId || affected.split(',').map(function(s){ return s.trim(); }).indexOf(String(roomId)) !== -1;
-      if (isRoomMatch && checkTime >= sDate && checkTime <= eDate) {
-        return {
-          isClosed: true,
-          title: row[1],
-          description: row[2],
-          startDate: Utilities.formatDate(new Date(sDate), 'Asia/Bangkok', 'yyyy-MM-dd'),
-          endDate: Utilities.formatDate(new Date(eDate), 'Asia/Bangkok', 'yyyy-MM-dd')
-        };
-      }
-    }
-
-    return { isClosed: false };
-  } catch (err) {
-    return { isClosed: false, error: err.toString() };
-  }
-}
-
-
-/**
- * ฟังก์ชันจัดการข้อมูลผู้ใช้ (CRUD Users)
- */
-function manageUser(action, userData, callerEmail) {
-  try {
-    var actorEmail = requireRole('Admin');
-    if (!verifyUserRole(actorEmail, 'Admin')) {
-      throw new Error('เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถจัดการข้อมูลผู้ใช้ได้');
-    }
-
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName('Users');
-    if (!sheet) throw new Error('ไม่พบชีต Users');
-
-    var data = sheet.getDataRange().getValues();
-
-    if (action === 'get') {
-      var users = [];
-      for (var i = 1; i < data.length; i++) {
-        users.push({
-          userId: data[i][0],
-          fullName: data[i][1],
-          personType: data[i][3],
-          email: data[i][7],
-          phone: data[i][6],
-          department: data[i][8],
-          division: data[i][10],
-          accessCode: data[i][15],
-          status: data[i][17]
-        });
-      }
-      return { success: true, users: users };
-    } else if (action === 'update') {
-      for (var j = 1; j < data.length; j++) {
-        if (String(data[j][0]) === String(userData.userId)) {
-          if (userData.fullName) sheet.getRange(j + 1, 2).setValue(userData.fullName);
-          if (userData.phone) sheet.getRange(j + 1, 7).setValue(userData.phone);
-          if (userData.department) sheet.getRange(j + 1, 9).setValue(userData.department);
-          if (userData.division) sheet.getRange(j + 1, 11).setValue(userData.division);
-          if (userData.status) sheet.getRange(j + 1, 18).setValue(userData.status);
-          writeLog('AdminAction', 'updateUser', 'Users', userData.userId, 'Updated user info', 'Success');
-          return { success: true, message: 'บันทึกข้อมูลผู้ใช้เรียบร้อยแล้ว' };
-        }
-      }
-      throw new Error('ไม่พบผู้ใช้งานรหัส ' + userData.userId);
-    } else if (action === 'delete') {
-      for (var k = 1; k < data.length; k++) {
-        if (String(data[k][0]) === String(userData.userId)) {
-          sheet.deleteRow(k + 1);
-          writeLog('AdminAction', 'deleteUser', 'Users', userData.userId, 'Deleted user', 'Success');
-          return { success: true, message: 'ลบข้อมูลผู้ใช้เรียบร้อยแล้ว' };
-        }
-      }
-      throw new Error('ไม่พบผู้ใช้งานรหัส ' + userData.userId);
-    }
-
-    throw new Error('Action ไม่ถูกต้อง');
-  } catch (err) {
-    writeLog('Error', 'manageUser', 'Users', userData ? userData.userId : '', err.toString(), 'Fail');
-    return { success: false, message: err.toString() };
-  }
-}
-
-/**
- * ฟังก์ชันจัดการข้อมูลห้อง (CRUD Rooms)
- */
-function manageRoom(action, roomData, callerEmail) {
-  try {
-    var actorEmail = requireRole('Admin');
-    if (!verifyUserRole(actorEmail, 'Admin')) {
-      throw new Error('เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถจัดการข้อมูลห้องได้');
-    }
-
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName('Rooms');
-    if (!sheet) throw new Error('ไม่พบชีต Rooms');
-
-    var data = sheet.getDataRange().getValues();
-
-    if (action === 'create') {
-      sheet.appendRow([
-        roomData.roomId, roomData.roomName, roomData.building || '', roomData.floor || '',
-        roomData.capacity || '', roomData.facilities || '', roomData.labHeadEmail || '',
-        roomData.approverEmail || '', roomData.imageUrl || '', roomData.status || 'Active'
-      ]);
-      writeLog('AdminAction', 'createRoom', 'Rooms', roomData.roomId, 'Created room', 'Success');
-      return { success: true, message: 'เพิ่มห้องปฏิบัติการเรียบร้อยแล้ว' };
-    } else if (action === 'update') {
-      for (var i = 1; i < data.length; i++) {
-        if (String(data[i][0]) === String(roomData.roomId)) {
-          if (roomData.roomName) sheet.getRange(i + 1, 2).setValue(roomData.roomName);
-          if (roomData.building) sheet.getRange(i + 1, 3).setValue(roomData.building);
-          if (roomData.floor) sheet.getRange(i + 1, 4).setValue(roomData.floor);
-          if (roomData.capacity) sheet.getRange(i + 1, 5).setValue(roomData.capacity);
-          if (roomData.facilities) sheet.getRange(i + 1, 6).setValue(roomData.facilities);
-          if (roomData.labHeadEmail) sheet.getRange(i + 1, 7).setValue(roomData.labHeadEmail);
-          if (roomData.approverEmail) sheet.getRange(i + 1, 8).setValue(roomData.approverEmail);
-          if (roomData.imageUrl) sheet.getRange(i + 1, 9).setValue(roomData.imageUrl);
-          if (roomData.status) sheet.getRange(i + 1, 10).setValue(roomData.status);
-          writeLog('AdminAction', 'updateRoom', 'Rooms', roomData.roomId, 'Updated room info', 'Success');
-          return { success: true, message: 'บันทึกข้อมูลห้องเรียบร้อยแล้ว' };
-        }
-      }
-      throw new Error('ไม่พบห้องรหัส ' + roomData.roomId);
-    } else if (action === 'delete') {
-      for (var j = 1; j < data.length; j++) {
-        if (String(data[j][0]) === String(roomData.roomId)) {
-          sheet.deleteRow(j + 1);
-          writeLog('AdminAction', 'deleteRoom', 'Rooms', roomData.roomId, 'Deleted room', 'Success');
-          return { success: true, message: 'ลบข้อมูลห้องเรียบร้อยแล้ว' };
-        }
-      }
-      throw new Error('ไม่พบห้องรหัส ' + roomData.roomId);
-    }
-
-    throw new Error('Action ไม่ถูกต้อง');
-  } catch (err) {
-    writeLog('Error', 'manageRoom', 'Rooms', roomData ? roomData.roomId : '', err.toString(), 'Fail');
-    return { success: false, message: err.toString() };
-  }
-}
-
-/**
- * ฟังก์ชันจัดการประกาศปิดห้อง / วันหยุด (CRUD RoomClosures)
- */
-function manageRoomClosure(action, closureData, callerEmail) {
-  try {
-    var actorEmail = requireAuthenticatedUser();
-    var role = determineSubmitterRole(actorEmail);
-    if (role !== 'Admin' && role !== 'DivisionStaff') {
-      throw new Error('เฉพาะ Admin หรือ เจ้าหน้าที่ประจำแผนก (Division Staff) เท่านั้นที่มีสิทธิ์จัดการประกาศปิดห้อง');
-    }
-
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName('RoomClosures');
-    if (!sheet) throw new Error('ไม่พบชีต RoomClosures');
-
-    var data = sheet.getDataRange().getValues();
-
-    if (action === 'create') {
-      var closureId = 'CLS-' + new Date().getTime();
-      var now = new Date();
-      sheet.appendRow([
-        closureId, closureData.title, closureData.description || '',
-        new Date(closureData.startDate), new Date(closureData.endDate),
-        closureData.affectedRoomIds || 'ALL', actorEmail, now, 'Active', ''
-      ]);
-
-      // ส่งอีเมล Broadcast อัตโนมัติ
-      sendRoomClosureNotification({
-        closureId: closureId,
-        title: closureData.title,
-        description: closureData.description || '',
-        startDate: closureData.startDate,
-        endDate: closureData.endDate,
-        affectedRoomIds: closureData.affectedRoomIds || 'ALL'
-      });
-
-      writeLog('AdminAction', 'createRoomClosure', 'RoomClosures', closureId, 'Created and broadcasted closure: ' + closureData.title, 'Success');
-      return { success: true, closureId: closureId, message: 'สร้างและส่งประกาศปิดห้องเรียบร้อยแล้ว' };
-    } else if (action === 'delete') {
-      for (var i = 1; i < data.length; i++) {
-        if (String(data[i][0]) === String(closureData.closureId)) {
-          sheet.deleteRow(i + 1);
-          writeLog('AdminAction', 'deleteRoomClosure', 'RoomClosures', closureData.closureId, 'Deleted closure', 'Success');
-          return { success: true, message: 'ลบประกาศเรียบร้อยแล้ว' };
-        }
-      }
-      throw new Error('ไม่พบประกาศรหัส ' + closureData.closureId);
-    }
-
-    throw new Error('Action ไม่ถูกต้อง');
-  } catch (err) {
-    writeLog('Error', 'manageRoomClosure', 'RoomClosures', closureData ? closureData.closureId : '', err.toString(), 'Fail');
-    return { success: false, message: err.toString() };
-  }
-}
 
 
 

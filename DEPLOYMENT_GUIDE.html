@@ -268,7 +268,7 @@ footer a{color:var(--navy-2);text-decoration:none}
   <div class="step-h"><div class="num">1</div><div><h2>เตรียมบัญชี Google กับสิทธิ์ที่ต้องมี</h2><small>~5 นาที</small></div></div>
   <div class="step-b">
     <ul>
-      <li>ใช้บัญชี Google ขององค์กร (โดเมนเดียวกับแม่แบบ) เพื่อให้ <code>webapp.access=DOMAIN</code> ทำงานถูก</li>
+      <li>ใช้บัญชี Google (บุคคลภายนอกเปิดลิงก์ได้ด้วย <code>webapp.access=ANYONE</code>) — การเขียนข้อมูลยังต้องเข้าสู่ระบบ Google ก่อน</li>
       <li>ขอสิทธิ์ Editor บน Spreadsheet ใหม่ + เข้า Apps Script Editor ได้</li>
       <li>ยืนยันรายชื่อ: Owner (ผู้ดูแลหลัก) / Editor (ผู้ช่วย) / Viewer (เจ้าหน้าที่ตรวจ)</li>
     </ul>
@@ -335,7 +335,7 @@ footer a{color:var(--navy-2);text-decoration:none}
     "https://www.googleapis.com/auth/script.scriptapp",
     "https://www.googleapis.com/auth/script.send_mail"
   ],
-  "webapp": {"executeAs": "USER_ACCESSING", "access": "DOMAIN"}
+  "webapp": {"executeAs": "USER_ACCESSING", "access": "ANYONE"}
 }</pre>
     <div class="note">💡 ทุกครั้งที่ปรับ scopes ให้ deploy test → reconsent ก่อน production</div>
   </div>
@@ -564,7 +564,7 @@ footer a{color:var(--navy-2);text-decoration:none}
     <pre>node validate.js
 # หรือ
 npm run validate</pre>
-    <p>ตรวจ: ไฟล์ครบ, syntax OK, <code>webapp.access=DOMAIN</code>, ไม่มี secret/ต้องห้าม pattern, Q&A=50, components, functions, brace balance, token headers</p>
+    <p>ตรวจ: ไฟล์ครบ, syntax OK, <code>webapp.access=ANYONE</code>, ไม่มี secret/ต้องห้าม pattern, Q&A=50, components, functions, brace balance, token headers</p>
     <div class="ok">✅ Checkpoint: แสดง <code>ALL CHECKS PASSED</code> (exit 0)</div>
   </div>
 </div>
@@ -573,7 +573,7 @@ npm run validate</pre>
   <div class="step-b">
     <ol>
       <li>Apps Script → <b>Deploy → New deployment → Web app</b></li>
-      <li>Execute as: <b>User accessing</b> / Access: <b>Anyone within domain</b></li>
+      <li>Execute as: <b>User accessing</b> / Access: <b>Anyone with the link</b></li>
       <li>คัดลอก <b>Web App URL</b> ไปใช้ทดลองก่อน</li>
     </ol>
     <div class="note">💡 อย่า deploy production ก่อนทดสอบเสมอ</div>
@@ -648,8 +648,8 @@ npm run validate</pre>
       <tr><td>10–18</td><td><code>RoomID</code>–<code>EmergencyContact</code></td><td>รหัส/ชื่อห้อง, วัตถุประสงค์, StartDate/EndDate, AllowedTimeStart/End (เช่น 16:30-20:30), รายชื่อผู้ร่วมงาน (≥1 คน), ผู้ติดต่อฉุกเฉิน</td><td>🟢 ผู้ใช้</td></tr>
       <tr><td>19–42</td><td>Stage1–Stage4 (6 คอลัมน์ต่อขั้น)</td><td>แต่ละขั้น: <code>ApproverEmail</code>, <code>Status</code> (Pending/Approved/Rejected/Skipped), <code>Date</code>, <code>Note</code>, <code>Token</code> (Secure Token), <code>ReminderSentAt</code></td><td>🟡 ระบบ (Note ใส่โดยผู้อนุมัติ)</td></tr>
       <tr><td>43</td><td><code>BiometricAppointmentDate</code></td><td>วันเวลานัดสแกนลายนิ้วมือ/ใบหน้า</td><td>🟢 ผู้ใช้</td></tr>
-      <tr><td>44–46</td><td><code>BiometricStatus</code>, <code>CurrentStage</code>, <code>OverallStatus</code></td><td>สถานะชีวมิติ / ขั้นปัจจุบัน (1-4) / สถานะรวม (Pending/Approved/Rejected)</td><td>🟡 ระบบ</td></tr>
-      <tr><td>47–48</td><td><code>SignatureData</code>, <code>PhotoURL</code></td><td>Base64 PNG ลายเซ็น / URL รูป (สุ่มชื่อ, ≤5MB, JPEG/PNG/WebP)</td><td>🟢 ผู้ใช้</td></tr>
+      <tr><td>44–46</td><td><code>BiometricStatus</code>, <code>CurrentStage</code>, <code>OverallStatus</code></td><td>สถานะชีวมิติ / ขั้นปัจจุบัน (1-4) / สถานะรวม (InReview/Approved/Rejected/Active/Expired)</td><td>🟡 ระบบ</td></tr>
+      <tr><td>47–48</td><td><code>SignatureData</code>, <code>PhotoURL</code></td><td><code>SignatureData</code> = คอลัมน์สำรอง (Legacy, คงไว้เพื่อ index alignment) / <code>PhotoURL</code> = URL รูป (สุ่มชื่อ, ≤5MB, JPEG/PNG/WebP)</td><td>🟢 ผู้ใช้</td></tr>
       <tr><td>49</td><td><code>RequestToken</code></td><td>Token สำหรับผู้ขอเปิด Tracking Modal</td><td>🟡 ระบบ</td></tr>
       <tr><td>50–61</td><td>Stage1–Stage4 <code>Token*</code> (12 คอลัมน์)</td><td>แต่ละขั้น: <code>TokenUsedAt</code>, <code>TokenFailedAttempts</code> (ล็อกเมื่อครบ 5), <code>TokenLastFailedAt</code> — <b>token security metadata</b></td><td>🟡 ระบบ</td></tr>
     </table>

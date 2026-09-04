@@ -7,17 +7,15 @@
 ## 📌 จุดเด่นและการทำงานหลักของระบบขออนุมัติเข้าใช้ห้องปฏิบัติการสาขาวิชาวิศวกรรมโยธานอกเวลาปฏิบัติงาน (CE F.A.I.R.: Civil Engineering Flow Access Instant Registration)
 
 1. **โครงสร้าง 2 แท็บหลัก (Clean 2-Tab Design)**:
-   - 📝 **ยื่นคำขอ (Request Access)**: ฟอร์มยื่นคำขอแบบ Stepper 6 ขั้นตอน
+   - 📝 **ยื่นคำขอ (Request Access)**: ฟอร์มยื่นคำขอแบบ Stepper 5 ขั้นตอน
    - 📊 **แดชบอร์ด (Dashboard)**: สถิติ KPI, กราฟ, ตรวจสอบและติดตามสถานะคำขอ (Status Tracker), รายการห้องแล็บ และประกาศปิดห้อง
 2. **ระบบค้นหาอาจารย์ที่ปรึกษา (Searchable Advisor Combobox)**:
    - ในชีต `Advisor` คอลัมน์คือ **`Division (แผนก)`** เนื่องจากอาจารย์ทุกท่านสังกัดสาขาวิชาวิศวกรรมโยธา จึงจำแนกตามแผนกวิชาการ เช่น *แผนกวิศวกรรมโครงสร้าง, แผนกวิศวกรรมขนส่ง*
    - หน้าฟอร์มมีช่องค้นหาอาจารย์แบบ Real-time Search กรองได้ทั้งชื่อ-นามสกุล, แผนก และอีเมล
-3. **การแยกความแตกต่างระหว่างการนัดหมาย Biometric กับ ลายเซ็นดิจิทัล**:
-   - 🕒 **วันที่ และเวลาขอเข้ารับการบันทึก Biometric (ขั้นตอนที่ 3: Room, Time & Biometrics)**: วันและเวลาที่ผู้ขอสะดวกเดินทางมาสแกนลายนิ้วมือ/ใบหน้ากับ Admin ณ อาคารปฏิบัติการจริง ๆ
-   - ✍️ **ลงลายมือชื่อดิจิทัล (ขั้นตอนที่ 6: ลงนามและยืนยัน)**: การลงลายมือชื่อบนหน้าจอ (HTML5 Canvas) เพื่อยินยอมในหนังสือขออนุมัติ
-4. **การจัดเก็บรูปถ่ายและลายเซ็นดิจิทัล**:
+3. **การนัดหมาย Biometric (ขั้นตอนที่ 3: Room, Time & Biometrics)**:
+   - 🕒 **วันที่ และเวลาขอเข้ารับการบันทึก Biometric**: วันและเวลาที่ผู้ขอสะดวกเดินทางมาสแกนลายนิ้วมือ/ใบหน้ากับ Admin ณ อาคารปฏิบัติการจริง ๆ
+4. **การจัดเก็บรูปถ่ายผู้ขอ**:
    - 📷 **รูปถ่ายผู้ขอ (Applicant Photo)**: แปลงเป็นไฟล์ภาพ JPG อัปโหลดและบันทึกไว้ใน **Google Drive** ภายใต้โฟลเดอร์ `RoomAccess_Applicant_Photos` โดยอัตโนมัติ พร้อมบันทึก Shareable URL ลงชีต `Users` และชีต `Requests` (คอลัมน์ `PhotoURL`)
-   - ✍️ **ลายมือชื่อดิจิทัล (Digital Signature)**: แปลงเป็น Base64 Data URL จาก Canvas และจัดเก็บลงชีต `Requests` (คอลัมน์ `SignatureData`)
 5. **การดึงอีเมล Google Account อัตโนมัติ (Instant 0ms Email Preload)**:
    - ดึงอีเมลผู้ใช้จาก `Session.getActiveUser().getEmail()` และส่งผ่าน Server Template ทันทีที่เปิดหน้าเว็บ ช่วยให้กรอกอีเมลและค้นหาประวัติเดิมได้ทันทีโดยไม่ต้องรอดาวน์โหลด
 6. **การจัดรูปแบบอัตโนมัติ (Auto-Formatting)**:
@@ -95,7 +93,7 @@
 | `MAINTENANCE_MODE` | `FALSE` | เปิด/ปิดโหมดปิดปรับปรุงระบบ |
 | `TOKEN_EXPIRY_DAYS` | `7` | อายุ token สำหรับการอนุมัติ (วัน) |
 | `APPROVAL_REMINDER_DAYS` | `3` | จำนวนวันก่อนส่งอีเมลเตือนซ้ำ |
-| `LAST_ACCESS_CODE_SEQ` | `0500` | Running Sequence เริ่มที่ 0500; สร้างรหัสถัดไป 0501 และวนจาก 9999 กลับ 0501 |
+| `LAST_ACCESS_CODE_SEQ` | `0500` | Running Sequence เริ่มที่ 0500; สร้างรหัสถัดไป 0501 และวนจาก 9999 กลับ 0001 |
 | `LAST_REQUEST_ID` | `0` | Running Number ของ Request ID |
 | `LAST_USER_ID` | `0` | Running Number ของ User ID |
 | `DATA_RETENTION_MONTHS` | `12` | ระยะเวลาเก็บข้อมูลตามการตั้งค่าระบบ |
@@ -109,7 +107,7 @@
 1. **`Code.gs`**: Backend logic, 10 Sheets Database, One-Click Actions, KKU IntelSphere API integration, Biometric & Date adjustments
 2. **`Index.html`**: Web app container (2 main tabs: Request & Dashboard), preloaded user email injection
 3. **`Stylesheet.html`**: Pure CSS สำหรับธีมวิศวกรรมโยธา (Dark Crimson `#661003` & Deep Navy Blue `#183666`) พร้อมสไตล์ Searchable Combobox และ Modal
-4. **`JavaScript.html`**: Vue 3 Frontend, Searchable Advisor Dropdown, Auto-formatters, Review Modal, Signature Pad, 4s Dynamic Loading Text และ reusable components (`StatusBadge`, `RoomCard`, `ModalConfirm`, `TimelineStep`, `LoadingSpinner`)
+4. **`JavaScript.html`**: Vue 3 Frontend, Searchable Advisor Dropdown, Auto-formatters, Review Modal, 4s Dynamic Loading Text และ reusable components (`StatusBadge`, `RoomCard`, `ModalConfirm`, `TimelineStep`, `LoadingSpinner`)
 5. **`ReviewModal.html`**: Modal สำหรับตรวจรายละเอียดคำขอและอนุมัติ/ปฏิเสธ โดยไม่แยกเป็น Approve View
 6. **`appsscript.json`**: กำหนด runtime, Web App และ OAuth scopes ที่ backend ใช้งานจริง
 7. **`.gitignore`**: ป้องกันไฟล์ local configuration, secret และไฟล์ generated ไม่ให้ถูก commit
@@ -126,7 +124,7 @@
 5. หลังแก้ `appsscript.json` ให้ redeploy และยอมรับ OAuth consent ตาม scope ที่ร้องขอ
 
 ### Pre-Deploy Validation
-รัน `npm run validate` (Node.js) เพื่อตรวจก่อน deploy ทุกครั้ง — ตรวจไฟล์, JSON syntax, Web App access = DOMAIN, ไม่มี secret/public pattern, Q&A = 50, component 5 ตัว, ฟังก์ชันสำคัญ, brace balance และ token metadata headers
+รัน `npm run validate` (Node.js) เพื่อตรวจก่อน deploy ทุกครั้ง — ตรวจไฟล์, JSON syntax, Web App access = ANYONE, ไม่มี secret/public pattern, Q&A = 50, component 5 ตัว, ฟังก์ชันสำคัญ, brace balance และ token metadata headers
 
 ### Production Smoke Test Checklist (ก่อน deploy Version จริง)
 1. Deploy เวอร์ชันทดสอบ (Test Deployment) ก่อน

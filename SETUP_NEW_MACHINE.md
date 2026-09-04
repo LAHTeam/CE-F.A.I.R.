@@ -141,8 +141,8 @@ clasp push
 
 1. **Deploy → New deployment**
 2. Type = **Web app**
-3. Execute as = **Me**
-4. Who has access = **ภายใน domain (DOMAIN)** — ตรงกับ `appsscript.json`
+3. Execute as = **User accessing the web app**
+4. Who has access = **Anyone with the link (ANYONE)** — ตรงกับ `appsscript.json`
 5. กด Deploy → คัดลอก `/exec` URL ไปใช้/แจก
 
 > ทุกครั้งที่แก้ `appsscript.json` ต้อง Deploy ใหม่ และยอมรับ OAuth consent ตาม scope ที่ขอ
@@ -166,8 +166,8 @@ git commit -m "describe your change"
 git push origin HEAD:main
 ```
 
-> หมายเหตุ branch: local ใช้ชื่อ `master` ส่วน remote ใช้ `main`
-> จึงใช้ `git push origin HEAD:main` (หรือตั้ง upstream ใหม่ด้วย `git branch -m main`)
+> หมายเหตุ branch: ทั้ง local และ remote ใช้ชื่อ `main`
+> จึงใช้ `git push origin main`
 
 ---
 
@@ -193,4 +193,4 @@ git push origin HEAD:main
 - [ ] `clasp push` สำเร็จ
 - [ ] `initDatabase()` + `setupDailyTriggers()` (authorize)
 - [ ] ตั้งค่า Script Properties
-- [ ] Deploy เป็น Web App (DOMAIN)
+- [ ] Deploy เป็น Web App (ANYONE)

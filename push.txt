@@ -1,8 +1,8 @@
 # CE F.A.I.R. — push commands (quick reference)
 # ==========================================
 
-# สำรองโค้ดขึ้น GitHub (local=master, remote=main)
-git push origin HEAD:main
+# สำรองโค้ดขึ้น GitHub (local=main, remote=main)
+git push origin main
 
 # push ขึ้น Google Apps Script (ตาม .claspignore = 6 ไฟล์เว็บแอป)
 clasp push
